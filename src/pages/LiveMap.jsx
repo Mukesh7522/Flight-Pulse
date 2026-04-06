@@ -226,9 +226,9 @@ const Countdown = memo(function Countdown({ secondsSince, pipelineDown }) {
     const id = setInterval(() => setVal(c => c == null ? null : c <= 1 ? 180 : c - 1), 1000)
     return () => clearInterval(id)
   }, [secondsSince])
-  const cls = pipelineDown ? 'text-xs text-error font-bold'
-    : val != null && val <= 10  ? 'text-xs text-primary font-bold'
-    : 'text-xs text-secondary'
+  const cls = pipelineDown ? 'text-2xl text-error font-bold'
+    : val != null && val <= 10  ? 'text-2xl text-primary font-bold'
+    : 'text-2xl text-secondary'
   return (
     <div className="flex flex-col">
       <span className="text-[10px] uppercase tracking-widest text-secondary font-mono">Next Refresh</span>
@@ -396,9 +396,9 @@ export default function LiveMap() {
         <div className="flex items-center gap-12">
           {[
             { label: 'Flights In Air', val: stats?.flights_in_air?.toLocaleString() ?? airborne.filter(f=>!f.on_ground).length.toLocaleString(), cls: 'text-2xl text-primary' },
-            { label: 'Countries',      val: stats?.countries_active ?? '—',           cls: 'text-xl text-on-surface' },
-            { label: 'On Ground',      val: stats?.flights_on_ground?.toLocaleString() ?? '—', cls: 'text-xl text-on-surface' },
-            { label: 'Ghost Alerts',   val: ghosts.length, cls: 'text-xl text-error' },
+            { label: 'Countries',      val: stats?.countries_active ?? '—',           cls: 'text-2xl text-on-surface' },
+            { label: 'On Ground',      val: stats?.flights_on_ground?.toLocaleString() ?? '—', cls: 'text-2xl text-on-surface' },
+            { label: 'Ghost Alerts',   val: ghosts.length, cls: 'text-2xl text-error' },
           ].map(({ label, val, cls }) => (
             <div key={label} className="flex flex-col">
               <span className="text-[10px] uppercase tracking-widest text-secondary font-mono">{label}</span>
@@ -421,9 +421,11 @@ export default function LiveMap() {
 
         {/* Ghost Alerts */}
         <aside className="space-y-3">
-          <h3 className="text-[11px] font-bold tracking-[0.2em] text-error uppercase">
-            Ghost Alerts {ghosts.length > 0 && `(${ghosts.length})`}
-          </h3>
+          <div className="flex items-center h-6">
+            <h3 className="text-[11px] font-bold tracking-[0.2em] text-error uppercase">
+              Ghost Alerts {ghosts.length > 0 && `(${ghosts.length})`}
+            </h3>
+          </div>
           {ghosts.length === 0 && !loading && (
             <p className="text-xs text-[#334155] font-mono">No active ghost signals.</p>
           )}
@@ -451,7 +453,7 @@ export default function LiveMap() {
 
         {/* Live Feed */}
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between h-6">
             <h3 className="text-[11px] font-bold tracking-[0.2em] text-secondary uppercase">Live Feed</h3>
             <div className="flex items-center gap-1.5">
               <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
@@ -474,7 +476,9 @@ export default function LiveMap() {
 
         {/* Live Regional Traffic */}
         <section className="space-y-3">
-          <h3 className="text-[11px] font-bold tracking-[0.2em] text-secondary uppercase">Live Regional Traffic</h3>
+          <div className="flex items-center h-6">
+            <h3 className="text-[11px] font-bold tracking-[0.2em] text-secondary uppercase">Live Regional Traffic</h3>
+          </div>
           <div className="bg-surface-container-low border border-[#1C2A40] rounded-lg overflow-hidden">
             <table className="w-full text-left border-collapse">
               <thead>
