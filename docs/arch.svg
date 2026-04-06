@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 250">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#2DD4BF"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="820" height="250" rx="14" fill="#0A0E1A"/>
+  <rect width="820" height="250" rx="14" fill="none" stroke="#1E293B" stroke-width="1.5"/>
+  <text x="410" y="28" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#475569" letter-spacing="4">PIPELINE  ARCHITECTURE</text>
+
+  <!-- ── Box 1: Scheduler ── -->
+  <rect x="14" y="44" width="172" height="178" rx="10" fill="#0D1424" stroke="#3B82F6" stroke-width="2"/>
+  <rect x="14" y="44" width="172" height="32" rx="10" fill="#1e3a8a" fill-opacity="0.6"/>
+  <text x="100" y="65" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#93C5FD" font-weight="bold">SCHEDULER</text>
+  <line x1="24" y1="76" x2="176" y2="76" stroke="#1E293B" stroke-width="1"/>
+  <text x="100" y="96"  text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="#94A3B8">GitHub Actions</text>
+  <text x="100" y="112" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">cron: */3 * * * *</text>
+  <line x1="24" y1="124" x2="176" y2="124" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="100" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="#94A3B8">cron-job.org</text>
+  <text x="100" y="158" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">backup trigger</text>
+  <text x="100" y="174" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">every 2 min</text>
+  <line x1="24" y1="186" x2="176" y2="186" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="100" y="210" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#3B82F6">fetch_flights.py</text>
+
+  <!-- Arrow 1 -->
+  <line x1="188" y1="133" x2="212" y2="133" stroke="#2DD4BF" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="200" y="126" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#2DD4BF">trigger</text>
+
+  <!-- ── Box 2: OpenSky ── -->
+  <rect x="214" y="44" width="172" height="178" rx="10" fill="#0D1424" stroke="#06B6D4" stroke-width="2"/>
+  <rect x="214" y="44" width="172" height="32" rx="10" fill="#164e63" fill-opacity="0.6"/>
+  <text x="300" y="65" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#67E8F9" font-weight="bold">OPENSKY API</text>
+  <line x1="224" y1="76" x2="376" y2="76" stroke="#1E293B" stroke-width="1"/>
+  <text x="300" y="96"  text-anchor="middle" font-family="ui-monospace,monospace" font-size="9.5" fill="#94A3B8">ADS-B Network</text>
+  <text x="300" y="112" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">~10,000 aircraft live</text>
+  <line x1="224" y1="124" x2="376" y2="124" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="300" y="142" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">icao24  callsign</text>
+  <text x="300" y="158" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">lat  lon  altitude</text>
+  <text x="300" y="174" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#64748B">velocity  heading</text>
+  <line x1="224" y1="186" x2="376" y2="186" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="300" y="210" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#06B6D4">parse  validate</text>
+
+  <!-- Arrow 2 -->
+  <line x1="388" y1="133" x2="412" y2="133" stroke="#2DD4BF" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="400" y="126" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#2DD4BF">upsert</text>
+
+  <!-- ── Box 3: Supabase ── -->
+  <rect x="414" y="44" width="200" height="178" rx="10" fill="#0D1424" stroke="#22C55E" stroke-width="2"/>
+  <rect x="414" y="44" width="200" height="32" rx="10" fill="#14532d" fill-opacity="0.6"/>
+  <text x="514" y="65" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#86EFAC" font-weight="bold">SUPABASE</text>
+  <line x1="424" y1="76" x2="604" y2="76" stroke="#1E293B" stroke-width="1"/>
+  <text x="514" y="93"  text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#4ADE80">flights_live</text>
+  <text x="514" y="107" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">~10,000 rows  live snapshot</text>
+  <text x="514" y="121" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#4ADE80">anomaly_hourly</text>
+  <text x="514" y="135" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">25 rows  24h window</text>
+  <text x="514" y="149" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#4ADE80">pipeline_runs</text>
+  <text x="514" y="163" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">3-day health log</text>
+  <line x1="424" y1="175" x2="604" y2="175" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="514" y="192" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">5 views  RLS  RPC  trigger</text>
+  <text x="514" y="208" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#22C55E">REST API upsert</text>
+
+  <!-- Arrow 3 -->
+  <line x1="616" y1="133" x2="640" y2="133" stroke="#2DD4BF" stroke-width="2" marker-end="url(#arr)"/>
+  <text x="628" y="126" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#2DD4BF">query</text>
+
+  <!-- ── Box 4: Dashboard ── -->
+  <rect x="642" y="44" width="164" height="178" rx="10" fill="#0D1424" stroke="#2DD4BF" stroke-width="2"/>
+  <rect x="642" y="44" width="164" height="32" rx="10" fill="#134e4a" fill-opacity="0.6"/>
+  <text x="724" y="65" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#5EEAD4" font-weight="bold">DASHBOARD</text>
+  <line x1="652" y1="76" x2="796" y2="76" stroke="#1E293B" stroke-width="1"/>
+  <text x="724" y="94"  text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF">Live Map</text>
+  <text x="724" y="107" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">canvas  ghosts  180s</text>
+  <text x="724" y="121" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF">Analytics</text>
+  <text x="724" y="134" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">charts  views  180s</text>
+  <text x="724" y="148" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF">Anomalies</text>
+  <text x="724" y="161" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">ghost table  180s</text>
+  <text x="724" y="175" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF">Insights</text>
+  <line x1="652" y1="186" x2="796" y2="186" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="724" y="210" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF">PostgREST  Vercel</text>
+
+  <!-- Bottom label -->
+  <text x="410" y="238" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8.5" fill="#334155">fetch  &#8594;  parse  &#8594;  validate  &#8594;  upsert  &#8594;  purge stale  &#8594;  aggregate anomalies  &#8594;  log run</text>
+</svg>

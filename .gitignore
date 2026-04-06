@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment — NEVER commit real credentials
+.env
+.env.local
+.env.production
+
+# Logs
+*.log
+ingestion/ingestion.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Claude Code internal
+.mcp.json
+
+# Temp files
+stitch.zip
+stitch_extracted/
+*.docx

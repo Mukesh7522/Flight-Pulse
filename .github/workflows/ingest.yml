@@ -1,0 +1,32 @@
+name: FlightPulse Ingestion
+
+on:
+  schedule:
+    - cron: '*/3 * * * *'   # every 3 minutes (~180s) — matches FETCH_INTERVAL
+  workflow_dispatch:          # manual trigger from GitHub UI
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10       # upsert across PgBouncer chunks can take 5-8 min
+
+    steps:
+      - uses: actions/checkout@v4.2.2
+
+      - uses: actions/setup-python@v5.4.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: ingestion/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r ingestion/requirements.txt
+
+      - name: Run ingestion
+        run: python ingestion/fetch_flights.py
+        env:
+          DATABASE_URL:            ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_KEY:    ${{ secrets.SUPABASE_SERVICE_KEY }}
+          OPENSKY_CLIENT_ID:       ${{ secrets.OPENSKY_CLIENT_ID }}
+          OPENSKY_CLIENT_SECRET:   ${{ secrets.OPENSKY_CLIENT_SECRET }}
+          PGCLIENTENCODING:        UTF8

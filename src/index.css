@@ -1,0 +1,66 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background-color: #0a0e1a;
+  color: #dfe4ff;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Data text helper */
+.data-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Ghost pulse animation for disappeared flight dots */
+.ghost-pulse {
+  position: relative;
+}
+.ghost-pulse::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  border: 1px solid #ee7d77;
+  border-radius: 50%;
+  animation: pulse-expand 2s infinite ease-out;
+  pointer-events: none;
+}
+@keyframes pulse-expand {
+  0%   { width: 14px; height: 14px; opacity: 1; }
+  100% { width: 42px; height: 42px; opacity: 0; }
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  user-select: none;
+}
+
+/* Thin custom scrollbar */
+::-webkit-scrollbar          { width: 4px; height: 4px; }
+::-webkit-scrollbar-track    { background: #0a0e1a; }
+::-webkit-scrollbar-thumb    { background: #1c2a40; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #3a476c; }
+
+/* Leaflet map z-index fix */
+.leaflet-container {
+  z-index: 0;
+  background: #060910;
+}

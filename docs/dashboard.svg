@@ -1,0 +1,239 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 460">
+  <!-- Background -->
+  <rect width="820" height="460" rx="14" fill="#0A0E1A"/>
+  <rect width="820" height="460" rx="14" fill="none" stroke="#1E293B" stroke-width="1.5"/>
+  <text x="410" y="28" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" fill="#475569" letter-spacing="4">DASHBOARD  —  4 PAGES</text>
+  <line x1="410" y1="38" x2="410" y2="452" stroke="#1E293B" stroke-width="1"/>
+  <line x1="14"  y1="246" x2="806" y2="246" stroke="#1E293B" stroke-width="1"/>
+
+  <!-- ══════════════════════════════════════════════════
+       PANEL 1 — LIVE MAP  (top-left)
+  ══════════════════════════════════════════════════ -->
+  <rect x="14" y="40" width="392" height="202" rx="8" fill="#080D18" stroke="#2DD4BF" stroke-width="1.5"/>
+  <rect x="14" y="40" width="392" height="26" rx="8" fill="#0B2035"/>
+  <text x="22"  y="57" font-family="ui-monospace,monospace" font-size="10" fill="#2DD4BF" font-weight="bold">Live Map</text>
+  <text x="400" y="57" text-anchor="end" font-family="ui-monospace,monospace" font-size="8" fill="#475569">Leaflet + Canvas</text>
+
+  <!-- Stat bar -->
+  <rect x="18"  y="70" width="88" height="18" rx="4" fill="#0F1A2E" stroke="#1E3A5F" stroke-width="0.8"/>
+  <text x="62"  y="82" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#2DD4BF">6,841 in air</text>
+  <rect x="110" y="70" width="88" height="18" rx="4" fill="#0F1A2E" stroke="#1E3A5F" stroke-width="0.8"/>
+  <text x="154" y="82" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">3,102 ground</text>
+  <rect x="202" y="70" width="88" height="18" rx="4" fill="#0F1A2E" stroke="#7F1D1D" stroke-width="0.8"/>
+  <text x="246" y="82" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#F87171">38 ghosts</text>
+  <rect x="294" y="70" width="108" height="18" rx="4" fill="#0F1A2E" stroke="#1E3A5F" stroke-width="0.8"/>
+  <text x="348" y="82" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">122 countries</text>
+
+  <!-- Map grid -->
+  <rect x="18" y="92" width="296" height="144" rx="4" fill="#060B14"/>
+  <line x1="18" y1="120" x2="314" y2="120" stroke="#0D1628" stroke-width="1"/>
+  <line x1="18" y1="148" x2="314" y2="148" stroke="#0D1628" stroke-width="1"/>
+  <line x1="18" y1="176" x2="314" y2="176" stroke="#0D1628" stroke-width="1"/>
+  <line x1="18" y1="204" x2="314" y2="204" stroke="#0D1628" stroke-width="1"/>
+  <line x1="80"  y1="92" x2="80"  y2="236" stroke="#0D1628" stroke-width="1"/>
+  <line x1="152" y1="92" x2="152" y2="236" stroke="#0D1628" stroke-width="1"/>
+  <line x1="224" y1="92" x2="224" y2="236" stroke="#0D1628" stroke-width="1"/>
+  <!-- Europe cluster -->
+  <circle cx="196" cy="112" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="210" cy="106" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="185" cy="118" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="202" cy="122" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="176" cy="108" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="218" cy="114" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <!-- N. America cluster -->
+  <circle cx="88"  cy="110" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="100" cy="120" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="76"  cy="124" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="108" cy="104" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <!-- Asia cluster -->
+  <circle cx="258" cy="112" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="270" cy="120" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <circle cx="248" cy="126" r="2.5" fill="#2DD4BF" opacity="0.9"/>
+  <!-- Ghost markers -->
+  <circle cx="156" cy="138" r="3.5" fill="#EF4444" opacity="0.95"/>
+  <circle cx="156" cy="138" r="7"   fill="none" stroke="#EF4444" stroke-width="1" opacity="0.4"/>
+  <circle cx="232" cy="155" r="3.5" fill="#EF4444" opacity="0.95"/>
+  <circle cx="232" cy="155" r="7"   fill="none" stroke="#EF4444" stroke-width="1" opacity="0.4"/>
+  <!-- Sparse -->
+  <circle cx="42"  cy="158" r="1.5" fill="#2DD4BF" opacity="0.5"/>
+  <circle cx="296" cy="128" r="1.5" fill="#2DD4BF" opacity="0.5"/>
+  <circle cx="130" cy="165" r="1.5" fill="#2DD4BF" opacity="0.5"/>
+  <circle cx="52"  cy="188" r="1.5" fill="#2DD4BF" opacity="0.5"/>
+  <circle cx="288" cy="172" r="1.5" fill="#2DD4BF" opacity="0.5"/>
+
+  <!-- Click info card -->
+  <rect x="318" y="92" width="84" height="144" rx="6" fill="#0A1628" stroke="#1E3A5F" stroke-width="1"/>
+  <text x="360" y="107" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#2DD4BF" font-weight="bold">EK201</text>
+  <line x1="322" y1="112" x2="398" y2="112" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="322" y="124" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">ICAO24</text>
+  <text x="322" y="135" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">a3d4f9</text>
+  <text x="322" y="147" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Country</text>
+  <text x="322" y="158" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">UAE</text>
+  <text x="322" y="170" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Altitude</text>
+  <text x="322" y="181" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">38,000 ft</text>
+  <text x="322" y="193" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Speed</text>
+  <text x="322" y="204" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">842 km/h</text>
+  <text x="322" y="216" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Heading</text>
+  <text x="322" y="227" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">247 deg</text>
+
+  <text x="210" y="237" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#475569">canvas  zero DOM per aircraft  ghost overlay  click-to-inspect</text>
+
+  <!-- ══════════════════════════════════════════════════
+       PANEL 2 — ANALYTICS  (top-right)
+  ══════════════════════════════════════════════════ -->
+  <rect x="414" y="40" width="392" height="202" rx="8" fill="#080D18" stroke="#A78BFA" stroke-width="1.5"/>
+  <rect x="414" y="40" width="392" height="26" rx="8" fill="#1A0B35"/>
+  <text x="422" y="57" font-family="ui-monospace,monospace" font-size="10" fill="#A78BFA" font-weight="bold">Analytics</text>
+  <text x="800" y="57" text-anchor="end" font-family="ui-monospace,monospace" font-size="8" fill="#475569">Recharts + SQL views</text>
+
+  <!-- Airline bars (left) -->
+  <text x="418" y="74" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Airline Activity</text>
+  <text x="418" y="88"  font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">Emirates</text>
+  <rect x="480" y="80" width="108" height="9" rx="2" fill="#4F46E5" opacity="0.85"/>
+  <text x="418" y="103" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">Ryanair</text>
+  <rect x="480" y="95" width="88"  height="9" rx="2" fill="#4F46E5" opacity="0.75"/>
+  <text x="418" y="118" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">Delta</text>
+  <rect x="480" y="110" width="72" height="9" rx="2" fill="#4F46E5" opacity="0.65"/>
+  <text x="418" y="133" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">IndiGo</text>
+  <rect x="480" y="125" width="60" height="9" rx="2" fill="#4F46E5" opacity="0.55"/>
+  <text x="418" y="148" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">Lufthansa</text>
+  <rect x="480" y="140" width="50" height="9" rx="2" fill="#4F46E5" opacity="0.45"/>
+  <text x="418" y="163" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">United</text>
+  <rect x="480" y="155" width="42" height="9" rx="2" fill="#4F46E5" opacity="0.38"/>
+  <text x="418" y="178" font-family="ui-monospace,monospace" font-size="7.5" fill="#94A3B8">Other</text>
+  <rect x="480" y="170" width="32" height="9" rx="2" fill="#4F46E5" opacity="0.30"/>
+
+  <!-- Vertical divider -->
+  <line x1="604" y1="64" x2="604" y2="236" stroke="#1E293B" stroke-width="0.8"/>
+
+  <!-- Altitude donut -->
+  <text x="710" y="74" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Altitude Distribution</text>
+  <circle cx="710" cy="136" r="44" fill="none" stroke="#0D1628" stroke-width="18"/>
+  <circle cx="710" cy="136" r="44" fill="none" stroke="#2DD4BF" stroke-width="18" stroke-dasharray="110 166" stroke-dashoffset="0"    transform="rotate(-90 710 136)"/>
+  <circle cx="710" cy="136" r="44" fill="none" stroke="#6366F1" stroke-width="18" stroke-dasharray="62 214"  stroke-dashoffset="-110"  transform="rotate(-90 710 136)"/>
+  <circle cx="710" cy="136" r="44" fill="none" stroke="#F59E0B" stroke-width="18" stroke-dasharray="40 236"  stroke-dashoffset="-172"  transform="rotate(-90 710 136)"/>
+  <circle cx="710" cy="136" r="44" fill="none" stroke="#475569" stroke-width="18" stroke-dasharray="64 212"  stroke-dashoffset="-212"  transform="rotate(-90 710 136)"/>
+  <text x="710" y="131" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#94A3B8">Cruise</text>
+  <text x="710" y="143" text-anchor="middle" font-family="ui-monospace,monospace" font-size="9" fill="#2DD4BF" font-weight="bold">65%</text>
+  <!-- Legend -->
+  <rect x="614" y="190" width="8" height="8" rx="2" fill="#2DD4BF"/><text x="626" y="198" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Cruise</text>
+  <rect x="614" y="203" width="8" height="8" rx="2" fill="#6366F1"/><text x="626" y="211" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Climbing</text>
+  <rect x="686" y="190" width="8" height="8" rx="2" fill="#F59E0B"/><text x="698" y="198" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Low</text>
+  <rect x="686" y="203" width="8" height="8" rx="2" fill="#475569"/><text x="698" y="211" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Ground</text>
+
+  <!-- Congestion area -->
+  <text x="418" y="196" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">24h Congestion</text>
+  <polygon points="418,232 432,224 446,220 460,228 474,218 488,212 502,216 516,222 530,214 544,218 558,210 572,214 586,218 600,212 600,234 418,234" fill="#2DD4BF" fill-opacity="0.12"/>
+  <polyline points="418,232 432,224 446,220 460,228 474,218 488,212 502,216 516,222 530,214 544,218 558,210 572,214 586,218 600,212" fill="none" stroke="#2DD4BF" stroke-width="1.5"/>
+
+  <text x="610" y="237" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#475569">airline  altitude  congestion  velocity scatter</text>
+
+  <!-- ══════════════════════════════════════════════════
+       PANEL 3 — ANOMALIES  (bottom-left)
+  ══════════════════════════════════════════════════ -->
+  <rect x="14" y="250" width="392" height="200" rx="8" fill="#080D18" stroke="#EF4444" stroke-width="1.5"/>
+  <rect x="14" y="250" width="392" height="26" rx="8" fill="#1F0808"/>
+  <text x="22"  y="267" font-family="ui-monospace,monospace" font-size="10" fill="#F87171" font-weight="bold">Anomalies</text>
+  <text x="400" y="267" text-anchor="end" font-family="ui-monospace,monospace" font-size="8" fill="#475569">anomaly_hourly table</text>
+
+  <!-- Stat cards -->
+  <rect x="18"  y="280" width="115" height="36" rx="6" fill="#1A0808" stroke="#7F1D1D" stroke-width="1"/>
+  <text x="75"  y="293" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Ghost Flights</text>
+  <text x="75"  y="310" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" fill="#F87171" font-weight="bold">38</text>
+  <rect x="140" y="280" width="115" height="36" rx="6" fill="#0A1820" stroke="#164e63" stroke-width="1"/>
+  <text x="197" y="293" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Low Altitude</text>
+  <text x="197" y="310" text-anchor="middle" font-family="ui-monospace,monospace" font-size="16" fill="#FCD34D" font-weight="bold">124</text>
+
+  <!-- Stacked area chart -->
+  <text x="18" y="330" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">24h Anomaly Timeline</text>
+  <polygon points="18,370 46,362 74,366 102,355 130,360 158,350 186,354 214,347 242,352 270,344 298,350 326,342 362,346 390,340 390,375 18,375" fill="#EF4444" fill-opacity="0.2"/>
+  <polyline points="18,370 46,362 74,366 102,355 130,360 158,350 186,354 214,347 242,352 270,344 298,350 326,342 362,346 390,340" fill="none" stroke="#EF4444" stroke-width="1.2" opacity="0.8"/>
+  <polygon points="18,358 46,350 74,354 102,343 130,348 158,340 186,344 214,337 242,342 270,335 298,340 326,333 362,337 390,332 390,340 362,346 326,342 298,350 270,344 242,352 214,347 186,354 158,350 130,360 102,355 74,366 46,362 18,370" fill="#FCD34D" fill-opacity="0.18"/>
+  <text x="18"  y="385" font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">00:00</text>
+  <text x="196" y="385" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">12:00</text>
+  <text x="390" y="385" text-anchor="end"    font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">24:00</text>
+
+  <!-- Ghost table -->
+  <rect x="18" y="390" width="384" height="16" rx="3" fill="#130606"/>
+  <text x="28"  y="401" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">ICAO24</text>
+  <text x="100" y="401" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Callsign</text>
+  <text x="172" y="401" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Country</text>
+  <text x="244" y="401" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Alt ft</text>
+  <text x="310" y="401" font-family="ui-monospace,monospace" font-size="7" fill="#64748B">Min since contact</text>
+  <line x1="18" y1="406" x2="402" y2="406" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="28"  y="417" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">a3d4f9</text>
+  <text x="100" y="417" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">EK201</text>
+  <text x="172" y="417" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">UAE</text>
+  <text x="244" y="417" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">37,000</text>
+  <text x="310" y="417" font-family="ui-monospace,monospace" font-size="7" fill="#F87171">4.2 min</text>
+  <line x1="18" y1="421" x2="402" y2="421" stroke="#1E293B" stroke-width="0.8"/>
+  <text x="28"  y="432" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">b81a22</text>
+  <text x="100" y="432" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">RYR44</text>
+  <text x="172" y="432" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">Ireland</text>
+  <text x="244" y="432" font-family="ui-monospace,monospace" font-size="7" fill="#94A3B8">31,500</text>
+  <text x="310" y="432" font-family="ui-monospace,monospace" font-size="7" fill="#F87171">7.8 min</text>
+  <line x1="18" y1="436" x2="402" y2="436" stroke="#1E293B" stroke-width="0.8"/>
+
+  <text x="210" y="448" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#475569">ghost table  24h stacked area  pre-aggregated  pipeline-aware</text>
+
+  <!-- ══════════════════════════════════════════════════
+       PANEL 4 — INSIGHTS  (bottom-right)
+  ══════════════════════════════════════════════════ -->
+  <rect x="414" y="250" width="392" height="200" rx="8" fill="#080D18" stroke="#22C55E" stroke-width="1.5"/>
+  <rect x="414" y="250" width="392" height="26" rx="8" fill="#071A10"/>
+  <text x="422" y="267" font-family="ui-monospace,monospace" font-size="10" fill="#4ADE80" font-weight="bold">Insights</text>
+  <text x="800" y="267" text-anchor="end" font-family="ui-monospace,monospace" font-size="8" fill="#475569">custom SVG + Recharts</text>
+
+  <!-- Activity clock -->
+  <text x="510" y="285" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">24h Activity Clock</text>
+  <circle cx="510" cy="360" r="50" fill="none" stroke="#0D1628" stroke-width="1"/>
+  <circle cx="510" cy="360" r="36" fill="none" stroke="#0D1628" stroke-width="0.5"/>
+  <!-- Arc slices representing hourly activity -->
+  <path d="M510,360 L510,310 A50,50 0 0,1 535,316 Z" fill="#2DD4BF" fill-opacity="0.15"/>
+  <path d="M510,360 L535,316 A50,50 0 0,1 553,338 Z" fill="#2DD4BF" fill-opacity="0.28"/>
+  <path d="M510,360 L553,338 A50,50 0 0,1 560,364 Z" fill="#2DD4BF" fill-opacity="0.50"/>
+  <path d="M510,360 L560,364 A50,50 0 0,1 550,390 Z" fill="#2DD4BF" fill-opacity="0.65"/>
+  <path d="M510,360 L550,390 A50,50 0 0,1 535,406 Z" fill="#2DD4BF" fill-opacity="0.60"/>
+  <path d="M510,360 L535,406 A50,50 0 0,1 510,410 Z" fill="#2DD4BF" fill-opacity="0.45"/>
+  <path d="M510,360 L510,410 A50,50 0 0,1 485,406 Z" fill="#2DD4BF" fill-opacity="0.32"/>
+  <path d="M510,360 L485,406 A50,50 0 0,1 470,390 Z" fill="#2DD4BF" fill-opacity="0.22"/>
+  <path d="M510,360 L470,390 A50,50 0 0,1 460,364 Z" fill="#2DD4BF" fill-opacity="0.14"/>
+  <path d="M510,360 L460,364 A50,50 0 0,1 467,338 Z" fill="#2DD4BF" fill-opacity="0.10"/>
+  <path d="M510,360 L467,338 A50,50 0 0,1 485,316 Z" fill="#2DD4BF" fill-opacity="0.12"/>
+  <path d="M510,360 L485,316 A50,50 0 0,1 510,310 Z" fill="#2DD4BF" fill-opacity="0.14"/>
+  <circle cx="510" cy="360" r="5" fill="#2DD4BF" opacity="0.7"/>
+  <text x="510" y="305" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7" fill="#475569">00</text>
+  <text x="562" y="362" text-anchor="start"  font-family="ui-monospace,monospace" font-size="7" fill="#475569">12</text>
+
+  <!-- Geographic radar -->
+  <text x="710" y="285" text-anchor="middle" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Geographic Spread</text>
+  <polygon points="710,300 742,318 742,354 710,372 678,354 678,318" fill="none" stroke="#1E293B" stroke-width="1"/>
+  <polygon points="710,308 735,322 735,348 710,362 685,348 685,322" fill="none" stroke="#1E293B" stroke-width="0.5"/>
+  <polygon points="710,302 740,320 740,352 710,368 682,350 682,322" fill="#22C55E" fill-opacity="0.18" stroke="#22C55E" stroke-width="1.5"/>
+  <text x="710" y="298" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#64748B">N.Am</text>
+  <text x="748" y="324" text-anchor="start"  font-family="ui-monospace,monospace" font-size="6" fill="#64748B">Eur</text>
+  <text x="748" y="354" text-anchor="start"  font-family="ui-monospace,monospace" font-size="6" fill="#64748B">Asia</text>
+  <text x="710" y="382" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6" fill="#64748B">S.Am</text>
+  <text x="670" y="354" text-anchor="end"    font-family="ui-monospace,monospace" font-size="6" fill="#64748B">Afr</text>
+  <text x="670" y="324" text-anchor="end"    font-family="ui-monospace,monospace" font-size="6" fill="#64748B">Mid-E</text>
+
+  <!-- Longitude heatstrip -->
+  <text x="422" y="422" font-family="ui-monospace,monospace" font-size="7.5" fill="#64748B">Longitude Density  (west to east)</text>
+  <defs>
+    <linearGradient id="ht" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%"   stop-color="#0F1A2E"/>
+      <stop offset="22%"  stop-color="#1D4ED8" stop-opacity="0.55"/>
+      <stop offset="40%"  stop-color="#2DD4BF" stop-opacity="0.90"/>
+      <stop offset="56%"  stop-color="#2DD4BF" stop-opacity="0.70"/>
+      <stop offset="72%"  stop-color="#0EA5E9" stop-opacity="0.75"/>
+      <stop offset="100%" stop-color="#0F1A2E"/>
+    </linearGradient>
+  </defs>
+  <rect x="422" y="426" width="380" height="14" rx="4" fill="url(#ht)"/>
+  <text x="422" y="450" font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">-180</text>
+  <text x="612" y="450" text-anchor="middle" font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">0</text>
+  <text x="802" y="450" text-anchor="end"    font-family="ui-monospace,monospace" font-size="6.5" fill="#334155">+180</text>
+
+  <text x="610" y="448" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#475569">  </text>
+  <text x="610" y="449" text-anchor="middle" font-family="ui-monospace,monospace" font-size="8" fill="#475569">activity clock  geo radar  heatstrip  country top 20</text>
+</svg>
