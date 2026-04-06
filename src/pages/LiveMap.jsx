@@ -226,9 +226,9 @@ const Countdown = memo(function Countdown({ secondsSince, pipelineDown }) {
     const id = setInterval(() => setVal(c => c == null ? null : c <= 1 ? 180 : c - 1), 1000)
     return () => clearInterval(id)
   }, [secondsSince])
-  const cls = pipelineDown ? 'text-2xl text-error font-bold'
-    : val != null && val <= 10  ? 'text-2xl text-primary font-bold'
-    : 'text-2xl text-secondary'
+  const cls = pipelineDown ? 'text-xs text-error font-bold'
+    : val != null && val <= 10  ? 'text-xs text-primary font-bold'
+    : 'text-xs text-secondary'
   return (
     <div className="flex flex-col">
       <span className="text-[10px] uppercase tracking-widest text-secondary font-mono">Next Refresh</span>
@@ -417,7 +417,7 @@ export default function LiveMap() {
       </section>
 
       {/* ── Bottom Content ── */}
-      <section className="p-6 grid grid-cols-1 md:grid-cols-[280px_1fr_340px] gap-6 pb-12 bg-surface-dim">
+      <section className="p-6 grid grid-cols-1 md:grid-cols-[280px_1fr_340px] gap-6 pb-12 bg-surface-dim items-start">
 
         {/* Ghost Alerts */}
         <aside className="space-y-3">
