@@ -1,105 +1,44 @@
-<div align="center">
+# FlightPulse Global
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 140" width="720" height="140">
-  <defs>
-    <linearGradient id="hbg" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#0A0E1A"/>
-      <stop offset="100%" style="stop-color:#0F1624"/>
-    </linearGradient>
-    <linearGradient id="hacc" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#2DD4BF"/>
-      <stop offset="100%" style="stop-color:#2563EB"/>
-    </linearGradient>
-  </defs>
-  <rect width="720" height="140" rx="14" fill="url(#hbg)"/>
-  <rect width="720" height="140" rx="14" fill="none" stroke="#1C2A40" stroke-width="1"/>
-  <line x1="0" y1="70" x2="720" y2="70" stroke="#1C2A40" stroke-width="0.5"/>
-  <line x1="360" y1="0" x2="360" y2="140" stroke="#1C2A40" stroke-width="0.5"/>
-  <text x="65" y="82" font-size="48" text-anchor="middle" dominant-baseline="middle">&#9992;</text>
-  <text x="120" y="55" font-family="monospace" font-size="36" font-weight="bold" fill="url(#hacc)">FlightPulse</text>
-  <text x="120" y="90" font-family="monospace" font-size="13" fill="#64748B" letter-spacing="10">G L O B A L</text>
-  <text x="570" y="52" font-family="monospace" font-size="11" fill="#2DD4BF" text-anchor="middle">REAL-TIME</text>
-  <text x="570" y="72" font-family="monospace" font-size="11" fill="#64748B" text-anchor="middle">FLIGHT INTELLIGENCE</text>
-  <text x="570" y="92" font-family="monospace" font-size="10" fill="#475569" text-anchor="middle">10,000+ aircraft live</text>
-  <circle cx="655" cy="48" r="6" fill="#2DD4BF" opacity="0.95"/>
-  <circle cx="655" cy="48" r="12" fill="none" stroke="#2DD4BF" stroke-width="1.2" opacity="0.4"/>
-  <circle cx="655" cy="48" r="19" fill="none" stroke="#2DD4BF" stroke-width="0.6" opacity="0.18"/>
-</svg>
+Real-time global flight tracking dashboard — ingests live ADS-B transponder data from 10,000+ aircraft every 3 minutes, detects anomalies, and visualises everything in a dark-themed SOC-style interface.
 
-<br/>
-
-![Live Flights](https://img.shields.io/badge/Live_Flights-10%2C000%2B-2DD4BF?style=for-the-badge&logoColor=white)
-![Data Source](https://img.shields.io/badge/OpenSky_Network-ADS--B-2563EB?style=for-the-badge)
-![Stack](https://img.shields.io/badge/React_18_+_Supabase-Full_Stack-0F1624?style=for-the-badge&logo=react&logoColor=61DAFB)
-![Scheduler](https://img.shields.io/badge/GitHub_Actions-Every_3_min-181717?style=for-the-badge&logo=github-actions&logoColor=white)
-![Deploy](https://img.shields.io/badge/Frontend-Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
-
-**Real-time global flight tracking dashboard — ingests live ADS-B transponder data from 10,000+ aircraft every 3 minutes, detects anomalies, and visualises everything in a dark-themed SOC-style interface.**
-
-[**Live Demo**](https://flight--pulse.vercel.app) &nbsp;·&nbsp; [Features](#-features) &nbsp;·&nbsp; [Architecture](#-architecture) &nbsp;·&nbsp; [Dashboard](#-dashboard-pages) &nbsp;·&nbsp; [Setup](#-setup)
-
-</div>
+**[Live Demo](https://flight--pulse.vercel.app)**
 
 ---
 
-## ✨ Features
+## Features
 
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🗺️ Live Map
+### Live Map
 Canvas-rendered world map — scales to 10,000+ aircraft without frame drops.
 - Aircraft rotated by true heading, sized by altitude band
-- **Ghost flights** pulsing red — vanished transponders detected automatically
+- Ghost flights pulsing red — vanished transponders detected automatically
 - Click any aircraft: ICAO24, callsign, country, altitude, speed, heading, vertical rate
 - Stats bar: flights in air, on ground, ghost count, active countries
 
-</td>
-<td width="50%" valign="top">
-
-### 📊 Analytics
+### Analytics
 Four charts built entirely from PostgreSQL views — no client-side aggregation.
-- **Airline activity** bar chart — Emirates, Ryanair, Delta, IndiGo, Lufthansa & more
-- **Altitude distribution** donut — Ground / Low / Climbing / Cruise / High Alt
-- **24h congestion** area chart — average flights per hour from pipeline history
-- **Velocity scatter** — speed vs altitude across all live airborne flights
+- Airline activity bar chart — Emirates, Ryanair, Delta, IndiGo, Lufthansa & more
+- Altitude distribution donut — Ground / Low / Climbing / Cruise / High Alt
+- 24h congestion area chart — average flights per hour from pipeline history
+- Velocity scatter — speed vs altitude across all live airborne flights
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-
-### 🚨 Anomalies
+### Anomalies
 Pre-aggregated anomaly tracking — no expensive history table scans.
-- **Ghost flight table** — paginated, sortable list of aircraft with stale signals
-- **24h stacked area** — ghost count + low-altitude count per hour
+- Ghost flight table — paginated, sortable list of aircraft with stale signals
+- 24h stacked area — ghost count + low-altitude count per hour
 - Powered by `anomaly_hourly` (max 25 rows) updated each pipeline cycle
 - Suppresses false alerts automatically when the pipeline is offline
 
-</td>
-<td width="50%" valign="top">
-
-### 🌍 Insights
+### Insights
 Four custom visualisations built with Recharts and hand-crafted SVG.
-- **24h activity clock** — radial chart mapping air traffic congestion by hour
-- **Longitude density heatstrip** — east/west flight concentration across 360°
-- **Geographic spread radar** — 8-region radar chart (N. America, Europe, Asia-Pac, Mid-East, S. America, Africa, Oceania, Russia-CIS)
-- **Country leaderboard** — top 20 active origin countries
-
-</td>
-</tr>
-</table>
+- 24h activity clock — radial chart mapping air traffic congestion by hour
+- Longitude density heatstrip — east/west flight concentration across 360°
+- Geographic spread radar — 8-region radar chart (N. America, Europe, Asia-Pac, Mid-East, S. America, Africa, Oceania, Russia-CIS)
+- Country leaderboard — top 20 active origin countries
 
 ---
 
-## 🏗️ Architecture
-
-<div align="center">
-<img src="docs/arch.svg" width="820" alt="Pipeline Architecture"/>
-</div>
-
-<br/>
+## Architecture
 
 | Step | What happens |
 |---|---|
@@ -113,12 +52,6 @@ Four custom visualisations built with Recharts and hand-crafted SVG.
 
 ### Ghost Flight Detection
 
-<div align="center">
-<img src="docs/ghost.svg" width="780" alt="Ghost Flight Detection Timeline"/>
-</div>
-
-<br/>
-
 > Aircraft are flagged as ghosts by comparing `ingested_at` against the **last successful pipeline run** timestamp — not against `now()`. This eliminates false positives during the normal gap between fetches. A flight is only a ghost if it was absent from the OpenSky feed in that specific run.
 
 ```sql
@@ -131,13 +64,7 @@ WHERE ingested_at < (
 
 ---
 
-## 🗄️ Database Schema
-
-<div align="center">
-<img src="docs/schema.svg" width="820" alt="Database Schema"/>
-</div>
-
-<br/>
+## Database Schema
 
 **Views** computed on the tables (zero extra storage):
 
@@ -153,13 +80,7 @@ WHERE ingested_at < (
 
 ---
 
-## 📱 Dashboard Pages
-
-<div align="center">
-<img src="docs/dashboard.svg" width="820" alt="Dashboard Pages Overview"/>
-</div>
-
-<br/>
+## Dashboard Pages
 
 | Page | Route | Charts | Data source | Refresh |
 |---|---|---|---|---|
@@ -170,7 +91,7 @@ WHERE ingested_at < (
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer | Technology | Role |
 |---|---|---|
@@ -187,7 +108,7 @@ WHERE ingested_at < (
 
 ---
 
-## 🚀 Setup
+## Setup
 
 ### 1 — Supabase
 
@@ -267,19 +188,13 @@ python fetch_flights.py
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Flight-Pulse/
 ├── .github/
 │   └── workflows/
 │       └── ingest.yml              ← cron: */3 * * * *  +  workflow_dispatch
-│
-├── docs/
-│   ├── arch.svg                    ← architecture diagram
-│   ├── ghost.svg                   ← ghost detection timeline
-│   ├── schema.svg                  ← database schema
-│   └── dashboard.svg               ← dashboard pages overview
 │
 ├── ingestion/
 │   ├── fetch_flights.py            ← fetch → validate → upsert → cleanup → log
@@ -307,7 +222,7 @@ Flight-Pulse/
 
 ---
 
-## 🔒 Security
+## Security
 
 - **Row Level Security** on all tables — public `SELECT`, no public write
 - `VITE_SUPABASE_ANON_KEY` is safe in the browser — PostgREST enforces RLS on every query
@@ -316,7 +231,7 @@ Flight-Pulse/
 
 ---
 
-## ⏱️ Refresh Rates
+## Refresh Rates
 
 | Data | Interval | Why |
 |---|---|---|
@@ -328,7 +243,7 @@ Flight-Pulse/
 
 ---
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
@@ -341,7 +256,7 @@ Flight-Pulse/
 
 ---
 
-## 📈 Performance
+## Performance
 
 - **Zero DOM nodes per aircraft** — Leaflet canvas layer redraws the full frame in ~2ms vs freezing with 10,000+ individual HTML elements
 - **Server-side aggregation** — airline counts, altitude buckets, and country rankings are computed in PostgreSQL views; the frontend receives pre-grouped rows only
@@ -350,15 +265,4 @@ Flight-Pulse/
 
 ---
 
-<div align="center">
-
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
-![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white)
-![Tailwind](https://img.shields.io/badge/Tailwind-3.4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white)
-![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=flat-square&logo=vite&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-cron-181717?style=flat-square&logo=github-actions&logoColor=white)
-
 *Flight data sourced from [OpenSky Network](https://opensky-network.org) — a community-driven ADS-B receiver network.*
-
-</div>
