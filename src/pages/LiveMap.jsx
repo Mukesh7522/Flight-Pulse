@@ -315,7 +315,7 @@ export default function LiveMap() {
           touchZoom={true}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png"
+            url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
             attribution='&copy; OpenStreetMap &copy; CARTO'
             maxZoom={19}
             noWrap={true}
