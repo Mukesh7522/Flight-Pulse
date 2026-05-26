@@ -2,7 +2,7 @@ name: FlightPulse Ingestion
 
 on:
   schedule:
-    - cron: '*/3 * * * *'   # every 3 minutes (~180s) — matches FETCH_INTERVAL
+    - cron: '*/5 * * * *'   # every 5 minutes (~300s) — matches FETCH_INTERVAL
   workflow_dispatch:          # manual trigger from GitHub UI
 
 jobs:
