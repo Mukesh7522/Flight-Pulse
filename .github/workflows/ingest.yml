@@ -5,6 +5,10 @@ on:
     - cron: '*/5 * * * *'   # every 5 minutes (~300s) — matches FETCH_INTERVAL
   workflow_dispatch:          # manual trigger from GitHub UI
 
+permissions:
+  contents: read
+  actions: write              # lets the keep-alive step below re-enable this workflow
+
 jobs:
   ingest:
     runs-on: ubuntu-latest
@@ -30,3 +34,12 @@ jobs:
           OPENSKY_CLIENT_ID:       ${{ secrets.OPENSKY_CLIENT_ID }}
           OPENSKY_CLIENT_SECRET:   ${{ secrets.OPENSKY_CLIENT_SECRET }}
           PGCLIENTENCODING:        UTF8
+
+      # GitHub disables scheduled workflows after 60 days without repo activity
+      # (state "disabled_inactivity"). Re-enabling from inside a run resets that timer.
+      - name: Keep schedule alive
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/ingest.yml/enable"
