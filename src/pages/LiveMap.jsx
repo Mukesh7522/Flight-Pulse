@@ -315,8 +315,9 @@ export default function LiveMap() {
           touchZoom={true}
         >
           <TileLayer
-            url="https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png"
-            attribution='&copy; OpenStreetMap &copy; CARTO'
+            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+            attribution='Tiles &copy; Esri'
+            maxNativeZoom={16}
             maxZoom={19}
             noWrap={true}
             keepBuffer={4}

@@ -30,7 +30,11 @@ export function useFlightData() {
       if (err) throw err
       setFlights(data ?? [])
     } catch (e) {
-      setError(e.message)
+      setError(
+        /failed to fetch/i.test(e.message)
+          ? 'Cannot reach the database — check that the Supabase project is active and VITE_SUPABASE_URL is correct.'
+          : e.message
+      )
     } finally {
       setLoading(false)
     }
