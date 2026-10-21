@@ -14,12 +14,38 @@
  * dispatches cannot burn the credit budget.
  *   GITHUB_DISPATCH_TOKEN  fine-grained token, this repo only, Actions: Read and write
  *   GITHUB_REPO            optional "owner/name" (defaults to the Vercel git repo)
+ *
+ * TOKEN CANARY: when the token is configured, every call also does a read-only GitHub
+ * request with it. A 401/403 (expired or revoked) makes the endpoint return 503, so the
+ * uptime monitor alerts you BEFORE a real outage. The same token is normally used by the
+ * cron-job.org job, so this also warns you about that copy.
  */
+function repoSlug() {
+  return process.env.GITHUB_REPO
+    || `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
+}
+
+async function checkToken() {
+  const token = process.env.GITHUB_DISPATCH_TOKEN
+  if (!token) return { state: 'not configured', bad: false }
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repoSlug()}/actions/workflows/ingest.yml`, {
+      headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'User-Agent': 'flightpulse-health' },
+      signal: AbortSignal.timeout(6000),
+    })
+    if (r.status === 200) return { state: 'valid', bad: false }
+    if (r.status === 401 || r.status === 403 || r.status === 404) {
+      return { state: `INVALID (GitHub HTTP ${r.status}) — token expired, revoked, or lacks access to this repo`, bad: true }
+    }
+    return { state: `unknown (GitHub HTTP ${r.status})`, bad: false }
+  } catch (e) {
+    return { state: `unknown (${e.message})`, bad: false }
+  }
+}
 async function healIngestion() {
   const token = process.env.GITHUB_DISPATCH_TOKEN
   if (!token) return 'disabled (GITHUB_DISPATCH_TOKEN not set)'
-  const repo = process.env.GITHUB_REPO
-    || `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
+  const repo = repoSlug()
   const ref = process.env.GITHUB_REF_NAME || 'master'
   try {
     const r = await fetch(`https://api.github.com/repos/${repo}/actions/workflows/ingest.yml/dispatches`, {
@@ -63,13 +89,18 @@ export default async function handler(req, res) {
     if (age == null) {
       return res.status(503).json({ ok: false, reason: 'no data in flights_live' })
     }
-    const ok = age <= MAX_AGE
+    const fresh = age <= MAX_AGE
+    const tok = await checkToken()
+    const ok = fresh && !tok.bad
     const body = {
       ok,
-      reason: ok ? 'fresh' : `data is ${age}s old (limit ${MAX_AGE}s) — ingestion has stopped`,
+      reason: !fresh ? `data is ${age}s old (limit ${MAX_AGE}s) — ingestion has stopped`
+            : tok.bad ? `data is fresh, but the GitHub dispatch token is ${tok.state}`
+            : 'fresh',
       seconds_since_sync: age,
       flights_in_air: row.flights_in_air,
       ghost_count: row.ghost_count,
+      dispatch_token: tok.state,
     }
     if (age > HEAL_AFTER) body.heal = await healIngestion()
     return res.status(ok ? 200 : 503).json(body)

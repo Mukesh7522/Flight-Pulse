@@ -277,7 +277,7 @@ Flight-Pulse/
 | Ingestion | `.github/workflows/ingest.yml`, `ingestion/fetch_flights.py` | Runs can't pile up (concurrency group); one retry on OpenSky timeouts/5xx |
 | Watchdog | `.github/workflows/watchdog.yml` | Hourly: if data is >10 min old it re-enables + re-runs ingestion, re-checks, and **fails (emails you)** if still down. Uses only the built-in `GITHUB_TOKEN` — nothing that can expire |
 | Heartbeat | `.github/workflows/heartbeat.yml` | Weekly `[skip ci]` commit so GitHub never disables scheduled workflows after 60 idle days |
-| Health endpoint | `api/health.js` → `/api/health` | `200` = data fresh, `503` = stale/DB down. Monitor it externally. **Self-heal:** if `GITHUB_DISPATCH_TOKEN` is set in Vercel and data is older than 5 min, each call also starts the ingestion workflow — a trigger independent of cron-job.org and GitHub's scheduler |
+| Health endpoint | `api/health.js` → `/api/health` | `200` = data fresh, `503` = stale/DB down. Monitor it externally. **Self-heal:** if `GITHUB_DISPATCH_TOKEN` is set in Vercel and data is older than 5 min, each call also starts the ingestion workflow — a trigger independent of cron-job.org and GitHub's scheduler. **Token canary:** with the token set, every call also checks it read-only and reports `dispatch_token` (`valid` / `INVALID …`); an expired or revoked token turns the endpoint red (503) even when data is fresh, so you are warned before a real outage |
 | Basemap fallback | `src/lib/tiles.js` | Auto-switches provider when tiles error out; `VITE_TILE_URL` pins your own |
 | Frontend resilience | `src/App.jsx`, `src/hooks/useFlightData.js` | Error boundary, config-error screen, error banner clears itself, 15 s retries |
 | SPA rewrite | `vercel.json` | `/analytics` etc. work on refresh / shared links |
@@ -289,7 +289,7 @@ Flight-Pulse/
 3. **Supabase SQL**: run `supabase/hardening.sql` once (SQL Editor) — fixes false ghost alerts from slow upserts and (optionally) drops the dead `flights_history` table.
 4. **GitHub repo secrets** must exist: `DATABASE_URL`, `SUPABASE_SERVICE_KEY` (and `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` for full coverage). The watchdog uses the first two.
 5. **Vercel env vars**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (also used by `/api/health`). Optional `VITE_TILE_URL`, `VITE_TILE_ATTRIBUTION`, `HEALTH_MAX_AGE_SECONDS`.
-6. **Self-heal trigger (recommended)**: add `GITHUB_DISPATCH_TOKEN` in Vercel (Production) — a fine-grained GitHub token, this repo only, **Actions: Read and write** — then redeploy. UptimeRobot's 5-minute ping then restarts ingestion automatically whenever data goes stale. If the token expires, `/api/health` shows `"heal": "failed: ... HTTP 401"`.
+6. **Self-heal trigger (recommended)**: add `GITHUB_DISPATCH_TOKEN` in Vercel (Production) — a fine-grained GitHub token, this repo only, **Actions: Read and write** — then redeploy. UptimeRobot's 5-minute ping then restarts ingestion automatically whenever data goes stale. If the token expires or is revoked, `/api/health` turns red with `dispatch_token: INVALID …` (the cron-job.org job normally uses the same token, so replace it in both places).
 
 > **Note on GitHub's own scheduler:** it is best-effort. After re-enabling, `schedule`-event runs may not appear for a long time (none had in the first hour). Treat cron-job.org and the health self-heal as the reliable triggers, and the GitHub schedule/watchdog as extra safety nets.
 
