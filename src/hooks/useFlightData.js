@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
+import { fetchAllFlights } from '../lib/fetchAllFlights'
 
 export function useFlightData() {
   const [flights, setFlights]     = useState([])   // all rows from flights_live
@@ -20,15 +21,9 @@ export function useFlightData() {
   // ── Initial load ────────────────────────────────────────────
   const loadFlights = useCallback(async () => {
     try {
-      const { data, error: err } = await supabase
-        .from('flights_live')
-        .select('icao24, callsign, origin_country, lat, lon, geo_altitude, baro_altitude, on_ground, velocity, true_track, vertical_rate, ingested_at')
-        .not('lat', 'is', null)
-        .not('lon', 'is', null)
-        .limit(10000)
-
-      if (err) throw err
-      setFlights(data ?? [])
+      // Paged: a single request is capped at 10,000 rows but the table is larger
+      const data = await fetchAllFlights(supabase)
+      setFlights(data)
       setError(null)   // recovered — clear any earlier failure banner
     } catch (e) {
       setError(
