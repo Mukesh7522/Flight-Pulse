@@ -20,13 +20,13 @@ concurrency:
 
 jobs:
   ingest:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10       # upsert across PgBouncer chunks can take 5-8 min
 
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v7.0.1
 
-      - uses: actions/setup-python@v5.4.0
+      - uses: actions/setup-python@v7.0.0
         with:
           python-version: '3.11'
           cache: 'pip'

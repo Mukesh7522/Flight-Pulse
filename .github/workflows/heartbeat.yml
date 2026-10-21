@@ -14,10 +14,10 @@ permissions:
 
 jobs:
   beat:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 3
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v7.0.1
       - name: Commit heartbeat
         run: |
           date -u +%Y-%m-%dT%H:%M:%SZ > .github/heartbeat.txt
