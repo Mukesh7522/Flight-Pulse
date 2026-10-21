@@ -48,6 +48,15 @@ OPENSKY_CLIENT_ID     = os.environ.get("OPENSKY_CLIENT_ID")
 OPENSKY_CLIENT_SECRET = os.environ.get("OPENSKY_CLIENT_SECRET")
 OPENSKY_TOKEN_URL     = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
 
+# OpenSky credit budget: a global /states/all call costs 4 credits. Standard accounts get
+# 4,000 credits/day (= 1,000 calls), anonymous 400/day (= 100 calls). Several independent
+# triggers (cron-job.org, GitHub schedule, watchdog) can fire this script, so the script
+# itself enforces a minimum gap between OpenSky calls and extra triggers become no-ops.
+#   authenticated: >= 100 s  -> <= 864 calls/day = 3,456 credits (under 4,000)
+#   anonymous:     >= 900 s  -> <=  96 calls/day =   384 credits (under 400)
+MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 100))
+MIN_INTERVAL_ANON = int(os.environ.get("MIN_INTERVAL_ANON", 900))
+
 OPENSKY_URL      = "https://opensky-network.org/api/states/all"
 OPENSKY_TIMEOUT  = 30   # seconds
 FETCH_INTERVAL   = 180  # seconds — 480 requests/day, ~3.5 GB outbound/month (under 5 GB)
@@ -134,6 +143,29 @@ def get_opensky_token() -> str | None:
         return None
 
 
+class RateLimited(Exception):
+    """OpenSky returned 429 (daily credit budget used up)."""
+    def __init__(self, retry_after: int):
+        super().__init__(f"OpenSky 429 retry_after={retry_after}")
+        self.retry_after = retry_after
+
+
+def seconds_until_allowed(cur, min_interval: int) -> float:
+    """How long to wait before another OpenSky call is allowed (0 = go ahead).
+    Based on the newest pipeline_runs row; after a 429 it honours the logged retry_after."""
+    cur.execute("SELECT EXTRACT(EPOCH FROM (now() - run_at)), status, error_msg "
+                "FROM pipeline_runs ORDER BY run_at DESC LIMIT 1")
+    row = cur.fetchone()
+    if not row:
+        return 0.0
+    age, status, err = float(row[0]), row[1], row[2] or ""
+    wait = min_interval - age
+    m = re.search(r"retry_after=(\d+)", err) if status == "error" else None
+    if m:
+        wait = max(wait, int(m.group(1)) - age)
+    return max(0.0, wait)
+
+
 def fetch_opensky() -> tuple[list[dict], int]:
     """Fetch all live flights from OpenSky. Returns (records, latency_ms)."""
     t0    = time.monotonic()
@@ -158,11 +190,12 @@ def fetch_opensky() -> tuple[list[dict], int]:
         log.warning("OpenSky unreachable after retry — IP may be blocked, skipping run")
         return [], fetch_ms
     if resp.status_code == 429:
-        retry_after = int(resp.headers.get("Retry-After", 120))
-        log.warning(f"OpenSky 429 rate limited — backing off {retry_after}s")
-        time.sleep(retry_after)
-        raise RuntimeError(f"429 rate limited (backed off {retry_after}s)")
+        retry_after = int(resp.headers.get("X-Rate-Limit-Retry-After-Seconds")
+                          or resp.headers.get("Retry-After") or 3600)
+        log.warning("OpenSky 429: daily credit budget used up, retry in %ds", retry_after)
+        raise RateLimited(retry_after)
     resp.raise_for_status()
+    log.info("OpenSky credits remaining: %s", resp.headers.get("X-Rate-Limit-Remaining", "unknown"))
     fetch_ms = int((time.monotonic() - t0) * 1000)
 
     states = resp.json().get("states") or []
@@ -271,6 +304,13 @@ def run_once(conn) -> None:
         pass  # autocommit=True — no manual commit needed
         conn.close()
 
+    except RateLimited as e:
+        log.warning("Skipping run: %s", e)
+        try:
+            log_run(conn.cursor(), 0, 0, fetch_ms, 0, "error", str(e))
+        except Exception:
+            pass
+        return   # not a crash: next triggers will no-op until retry_after has passed
     except Exception as e:
         try:
             pass  # autocommit=True — no rollback needed
@@ -322,6 +362,19 @@ def main():
 
     conn = make_connection()
     try:
+        # Protect the OpenSky credit budget (see MIN_INTERVAL_* above)
+        authenticated = get_opensky_token() is not None
+        min_interval = MIN_INTERVAL_AUTH if authenticated else MIN_INTERVAL_ANON
+        wait = seconds_until_allowed(conn.cursor(), min_interval)
+        if wait > 0:
+            log.info("Skipping: last OpenSky call was too recent (%s mode, min gap %ds, wait %ds more) — "
+                     "protecting the daily credit budget", "authenticated" if authenticated else "ANONYMOUS",
+                     min_interval, int(wait))
+            return
+        if not authenticated:
+            log.warning("Running ANONYMOUS (400 credits/day): refresh limited to every %ds. "
+                        "Check OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET secrets.", MIN_INTERVAL_ANON)
+
         run_once(conn)
 
         # Purge pipeline_runs older than 3 days (cheap — runs on every cycle, near-instant if nothing to delete)
