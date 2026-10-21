@@ -290,13 +290,24 @@ Flight-Pulse/
 4. **GitHub repo secrets** must exist: `DATABASE_URL`, `SUPABASE_SERVICE_KEY` (and `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` for full coverage). The watchdog uses the first two.
 5. **Vercel env vars**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (also used by `/api/health`). Optional `VITE_TILE_URL`, `VITE_TILE_ATTRIBUTION`, `HEALTH_MAX_AGE_SECONDS`.
 
+### OpenSky credit budget (why extra triggers are safe)
+
+OpenSky charges **4 credits** per global `/states/all` call. Standard accounts get **4,000 credits/day (1,000 calls)**; anonymous access only **400 (100 calls)**. Because several independent triggers can start the script, `fetch_flights.py` enforces its own minimum gap using the newest `pipeline_runs` row:
+
+- authenticated: at least **100 s** between OpenSky calls (max 864 calls = about 3,456 credits/day)
+- anonymous (credentials missing/invalid): at least **900 s**, and a warning is logged. `/api/health` will then report stale data (>10 min), which is your signal to fix the `OPENSKY_*` secrets
+- after a `429` the run is logged with `retry_after=N` and later triggers stay quiet until it has passed (no more blind sleeping)
+- the log line `OpenSky credits remaining: N` shows the budget (open any run, step "Run ingestion")
+
+Override with the `MIN_INTERVAL_AUTH` / `MIN_INTERVAL_ANON` env vars in the workflow if your plan differs.
+
 ### What can still break (and what to do)
 
 | Failure | You will see | Fix |
 |---|---|---|
 | Supabase project paused/deleted | UptimeRobot alert; "Cannot reach the database" banner | Supabase dashboard → Restore project (ingestion every 2–5 min normally prevents auto-pause) |
 | Basemap provider changes (like CARTO's API-key requirement) | Watermark/blank map. Only tiles that *error* trigger the fallback; a provider returning a watermark with HTTP 200 can't be detected | Change the first entry in `src/lib/tiles.js` or set `VITE_TILE_URL` |
-| OpenSky blocks GitHub's IPs / rate-limits | `/api/health` 503 even though runs are green (`pipeline_runs.error_msg`) | Check OpenSky credentials secrets; consider a different runner/host |
+| OpenSky blocks GitHub's IPs / credit budget used up / bad credentials | `/api/health` 503 even though runs are green; `pipeline_runs.error_msg` shows `429 retry_after=...` | Check the `OPENSKY_*` secrets and the 'credits remaining' log line; the script already throttles itself (see above) |
 | GitHub Actions outage | Watchdog and ingest runs missing | Wait; cron-job.org triggers resume automatically |
 
 **Quick manual check:** open `https://<your-app>.vercel.app/api/health` — you should see `"ok": true` and `seconds_since_sync` under ~300.
