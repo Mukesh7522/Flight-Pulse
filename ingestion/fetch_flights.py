@@ -262,10 +262,16 @@ def upsert_anomaly_hourly(cur) -> None:
 
 
 def purge_stale_live(cur) -> None:
-    """Remove flights_live rows not seen in the last 30 minutes.
-    Prevents stale zombie rows from inflating ghost counts."""
-    cur.execute("DELETE FROM flights_live WHERE ingested_at < now() - interval '30 minutes'")
-    log.info("Purged stale flights_live rows older than 30 min")
+    """Apply the retention rules (flights_live 15 min, pipeline_runs 3 days, anomaly_hourly 25 h).
+    Uses the database function public.purge_retention() (supabase/retention.sql); if it has not been
+    installed yet, falls back to the same deletes inline so cleanup can never silently stop."""
+    try:
+        cur.execute("SELECT public.purge_retention()")
+        log.info("Retention applied (purge_retention)")
+    except Exception as e:
+        log.warning("purge_retention() unavailable (%s) - using inline deletes", type(e).__name__)
+        cur.execute("DELETE FROM flights_live WHERE ingested_at < now() - interval '15 minutes'")
+        log.info("Purged flights_live rows older than 15 min (inline)")
 
 
 def log_run(cur, records_fetched, records_upserted, fetch_ms, upsert_ms,

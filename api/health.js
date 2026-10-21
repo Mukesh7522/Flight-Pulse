@@ -15,6 +15,10 @@
  *   GITHUB_DISPATCH_TOKEN  fine-grained token, this repo only, Actions: Read and write
  *   GITHUB_REPO            optional "owner/name" (defaults to the Vercel git repo)
  *
+ * DB SIZE: if the db_size_mb() SQL function exists (supabase/db_size_monitor.sql) the response
+ * includes db_size_mb, and the endpoint turns red above DB_ALERT_MB (default 350) so you are
+ * warned long before the 500 MB free-tier limit. Missing function = field omitted, no alarm.
+ *
  * TOKEN CANARY: when the token is configured, every call also does a read-only GitHub
  * request with it. A 401/403 (expired or revoked) makes the endpoint return 503, so the
  * uptime monitor alerts you BEFORE a real outage. The same token is normally used by the
@@ -23,6 +27,22 @@
 function repoSlug() {
   return process.env.GITHUB_REPO
     || `${process.env.VERCEL_GIT_REPO_OWNER}/${process.env.VERCEL_GIT_REPO_SLUG}`
+}
+
+async function dbSizeMb(url, key) {
+  try {
+    const r = await fetch(`${url}/rest/v1/rpc/db_size_mb`, {
+      method: 'POST',
+      headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(6000),
+    })
+    if (!r.ok) return null          // function not installed yet, or transient error
+    const v = Number(await r.json())
+    return Number.isFinite(v) ? v : null
+  } catch {
+    return null
+  }
 }
 
 async function checkToken() {
@@ -69,6 +89,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store')
   const MAX_AGE   = Number(process.env.HEALTH_MAX_AGE_SECONDS) || 600 // 10 min
   const HEAL_AFTER = Number(process.env.HEAL_AFTER_SECONDS)    || 300 // 5 min
+  const DB_ALERT_MB = Number(process.env.DB_ALERT_MB)          || 350 // free tier limit is 500
 
   const url = process.env.VITE_SUPABASE_URL
   const key = process.env.VITE_SUPABASE_ANON_KEY
@@ -90,11 +111,13 @@ export default async function handler(req, res) {
       return res.status(503).json({ ok: false, reason: 'no data in flights_live' })
     }
     const fresh = age <= MAX_AGE
-    const tok = await checkToken()
-    const ok = fresh && !tok.bad
+    const [tok, sizeMb] = await Promise.all([checkToken(), dbSizeMb(url, key)])
+    const tooBig = sizeMb != null && sizeMb > DB_ALERT_MB
+    const ok = fresh && !tok.bad && !tooBig
     const body = {
       ok,
       reason: !fresh ? `data is ${age}s old (limit ${MAX_AGE}s) — ingestion has stopped`
+            : tooBig ? `database is ${sizeMb} MB (alert at ${DB_ALERT_MB} MB, free-tier limit 500 MB) — check retention`
             : tok.bad ? `data is fresh, but the GitHub dispatch token is ${tok.state}`
             : 'fresh',
       seconds_since_sync: age,
@@ -102,6 +125,7 @@ export default async function handler(req, res) {
       ghost_count: row.ghost_count,
       dispatch_token: tok.state,
     }
+    if (sizeMb != null) body.db_size_mb = sizeMb
     if (age > HEAL_AFTER) body.heal = await healIngestion()
     return res.status(ok ? 200 : 503).json(body)
   } catch (e) {

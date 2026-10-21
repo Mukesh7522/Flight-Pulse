@@ -304,6 +304,21 @@ OpenSky charges **4 credits** per global `/states/all` call. Standard accounts g
 
 Override with the `MIN_INTERVAL_AUTH` / `MIN_INTERVAL_ANON` env vars in the workflow if your plan differs.
 
+### Data retention — the database cannot grow towards the 500 MB limit
+
+Nothing is kept longer than the app can use it. The rules live in one database function, `public.purge_retention()` (`supabase/retention.sql`), which the ingestion script calls on every run (with an inline fallback if the function is missing):
+
+| Table | Kept for | Why |
+|---|---|---|
+| `flights_live` | **15 minutes** | ghosts are only shown for 15 min after last contact; older rows are dead weight and would inflate the "in air" count |
+| `pipeline_runs` | 3 days | run log; the congestion chart needs 24 h |
+| `anomaly_hourly` | 25 hours | the timeline shows 24 hourly points |
+
+Simulated over 300 cycles (about 10 hours of production) with these rules, the whole database stayed flat at about **13 MB** (`flights_live` about 5 MB). Two things keep it that way, and both are monitored:
+- **Deletion:** optionally also schedule it inside the database with `pg_cron` (instructions at the bottom of `retention.sql`) so cleanup never depends on GitHub or the script.
+- **Vacuum:** `flights_live` is rewritten every run, so Postgres must reclaim the dead rows (autovacuum does this by default). Without it the table would bloat to hundreds of MB.
+- **Size alarm:** after running `supabase/db_size_monitor.sql`, `/api/health` shows `db_size_mb` and turns red above 350 MB (`DB_ALERT_MB`), long before the 500 MB limit.
+
 ### What can still break (and what to do)
 
 | Failure | You will see | Fix |
