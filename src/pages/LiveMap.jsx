@@ -320,6 +320,7 @@ export default function LiveMap() {
             maxNativeZoom={16}
             maxZoom={19}
             noWrap={true}
+            bounds={[[-85.05, -180], [85.05, 180]]}
             keepBuffer={4}
           />
 
