@@ -1,3 +1,6 @@
+-- ⚠ DEPRECATED / OUT OF DATE: the live database is built from reset_database.sql
+-- (run-based ghost detection, no flights_history). Kept for reference only.
+
 -- ============================================================
 -- FlightPulse Global — Migrations (run on existing database)
 -- ============================================================

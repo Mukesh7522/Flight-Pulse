@@ -1,0 +1,68 @@
+name: FlightPulse Watchdog
+
+# Hourly safety net. If the data is stale it re-enables the ingestion workflow,
+# kicks off a run, and re-checks. If the data is still stale afterwards the job
+# FAILS, which makes GitHub email you. Uses only the built-in GITHUB_TOKEN
+# (no personal token that can expire) and the existing repo secrets.
+
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: flightpulse-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - name: Check freshness and self-heal
+        env:
+          DATABASE_URL:         ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          GH_TOKEN:             ${{ github.token }}
+          MAX_AGE:              '600'   # seconds; ingestion normally runs every 2-5 min
+        run: |
+          set -u
+          REF=$(echo "$DATABASE_URL" | sed -nE 's#^postgresql://postgres\.([^:]+):.*#\1#p')
+          [ -z "$REF" ] && REF=$(echo "$DATABASE_URL" | sed -nE 's#.*@db\.([^.]+)\.supabase\.co.*#\1#p')
+          if [ -z "$REF" ]; then echo "::error::Cannot derive Supabase project ref from DATABASE_URL secret"; exit 1; fi
+
+          age() {
+            curl -s -m 20 \
+              -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+              "https://$REF.supabase.co/rest/v1/dashboard_stats?select=seconds_since_sync" \
+              | sed -nE 's/.*"seconds_since_sync":([0-9]+).*/\1/p'
+          }
+
+          A=$(age)
+          echo "seconds since last sync: ${A:-unknown}"
+          if [ -n "$A" ] && [ "$A" -le "$MAX_AGE" ]; then
+            echo "Data is fresh. Nothing to do."
+            exit 0
+          fi
+
+          if [ -z "$A" ]; then
+            echo "::warning::Database unreachable or empty — project may be paused/deleted (restore it in the Supabase dashboard)"
+          fi
+
+          echo "::warning::Data is stale — re-enabling and triggering ingestion"
+          gh workflow enable ingest.yml   --repo "$GITHUB_REPOSITORY" || true
+          gh workflow run    ingest.yml   --repo "$GITHUB_REPOSITORY" --ref "${GITHUB_REF_NAME}" || true
+          sleep 120
+
+          A=$(age)
+          echo "seconds since last sync after heal attempt: ${A:-unknown}"
+          if [ -n "$A" ] && [ "$A" -le "$MAX_AGE" ]; then
+            echo "::notice::Pipeline recovered after watchdog restart"
+            exit 0
+          fi
+          echo "::error::Pipeline is still down after restart attempt — check the Supabase project, OpenSky and the ingest workflow logs"
+          exit 1

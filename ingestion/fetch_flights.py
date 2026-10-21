@@ -141,11 +141,21 @@ def fetch_opensky() -> tuple[list[dict], int]:
     headers = {"Authorization": f"Bearer {token}"} if token else {}
     if not token:
         log.warning("No OAuth2 token — using anonymous request (low rate limit)")
-    try:
-        resp = requests.get(OPENSKY_URL, headers=headers, timeout=OPENSKY_TIMEOUT)
-    except requests.exceptions.Timeout:
+    resp = None
+    for attempt in (1, 2):   # one retry on timeout / connection error / 5xx
+        try:
+            resp = requests.get(OPENSKY_URL, headers=headers, timeout=OPENSKY_TIMEOUT)
+            if resp.status_code < 500:
+                break
+            log.warning("OpenSky HTTP %d (attempt %d/2)", resp.status_code, attempt)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            log.warning("OpenSky request failed (attempt %d/2): %s", attempt, type(e).__name__)
+            resp = None
+        if attempt == 1:
+            time.sleep(5)
+    if resp is None:
         fetch_ms = int((time.monotonic() - t0) * 1000)
-        log.warning("OpenSky API timed out after %dms — IP may be blocked, skipping run", fetch_ms)
+        log.warning("OpenSky unreachable after retry — IP may be blocked, skipping run")
         return [], fetch_ms
     if resp.status_code == 429:
         retry_after = int(resp.headers.get("Retry-After", 120))

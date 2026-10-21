@@ -1,0 +1,28 @@
+name: Repo heartbeat
+
+# GitHub disables scheduled workflows after 60 days without repository activity.
+# A tiny weekly commit keeps this repo "active" so the schedules never switch off.
+# [skip ci] stops Vercel and Actions from reacting to it.
+
+on:
+  schedule:
+    - cron: '23 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  beat:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4.2.2
+      - name: Commit heartbeat
+        run: |
+          date -u +%Y-%m-%dT%H:%M:%SZ > .github/heartbeat.txt
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/heartbeat.txt
+          git commit -m "chore: repo heartbeat [skip ci]"
+          git push

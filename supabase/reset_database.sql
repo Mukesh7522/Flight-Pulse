@@ -134,7 +134,7 @@ FROM flights_live
 WHERE
   NOT on_ground
   AND ingested_at < (
-    SELECT MAX(run_at) - INTERVAL '30 seconds'
+    SELECT MAX(run_at) - INTERVAL '75 seconds'
     FROM pipeline_runs
     WHERE status = 'success'
   )
@@ -148,7 +148,7 @@ SELECT
   COUNT(*) FILTER (
     WHERE NOT on_ground
     AND ingested_at < (
-      SELECT MAX(run_at) - INTERVAL '30 seconds'
+      SELECT MAX(run_at) - INTERVAL '75 seconds'
       FROM pipeline_runs WHERE status = 'success'
     )
   )                                                            AS ghost_count,

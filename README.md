@@ -257,23 +257,49 @@ Flight-Pulse/
 
 ---
 
-## Operations — what can break, and how to tell
+## Operations — built so it doesn't stop
 
-The app has four external dependencies. Each one has failed at least once; here is the symptom and the fix.
+### Architecture: every layer has a backup
 
-| Dependency | Failure | Symptom | Fix |
-|---|---|---|---|
-| **Basemap tiles** | Provider changes terms / needs an API key (CARTO did this in 2026: tiles became an "API KEY REQUIRED" watermark) | Map background shows a watermark or grey tiles | The map auto-falls back to the next provider in `src/lib/tiles.js` only when tiles *error out*. A provider that returns a watermark image with HTTP 200 cannot be detected: change the first entry in `tiles.js`, or set `VITE_TILE_URL` in Vercel (e.g. a MapTiler/Stadia URL with your key) |
-| **Supabase** | Project paused (free tier, inactivity) or deleted | "Cannot reach the database" banner; stats show `—` | Supabase dashboard → Restore project. Ingestion every 2 min counts as activity and prevents auto-pause, so a pause means ingestion had already stopped |
-| **GitHub Actions** | Schedule disabled after 60 days idle; runs stuck in *Queued* | Data older than 15 min, **PIPELINE OFFLINE** label, no ghost alerts | Enable workflow + Run workflow. A push that changes `ingest.yml` also triggers a run |
-| **cron-job.org** | Job disables itself after repeated HTTP errors (usually an expired GitHub token) | Job shows *Failed*, "No upcoming executions" | Create a new fine-grained GitHub token (only this repo, **Actions: Read and write**), put it in the job's `Authorization: Bearer …` header, enable the job, press **Test run** (expect HTTP 204). Fine-grained tokens expire after at most 1 year — set a calendar reminder |
-| **Vercel** | Missing SPA rewrite → 404 on refresh | `/analytics` 404s when opened directly | `vercel.json` rewrite (already in repo) |
+```
+ TRIGGERS (any one is enough)                 EXECUTOR                 STORE            MONITORING
+ ┌────────────────────────────┐
+ │ cron-job.org  (every 2 min)│──┐
+ │ GitHub schedule (every 5)  │──┼─► ingest.yml ──► OpenSky ──► Supabase ◄── /api/health ◄── UptimeRobot (alerts you)
+ │ Watchdog (hourly, self-heal)│──┘    (GitHub Actions)                       ▲
+ │ Push to ingest.yml          │                                             └── Watchdog fails the run → GitHub emails you
+ └────────────────────────────┘
+ Heartbeat commit (weekly) stops GitHub from ever disabling the schedules.
+```
 
-**Quick health check** (replace the URL/key with yours): `GET /rest/v1/dashboard_stats?select=seconds_since_sync` should return a number under ~300.
+| Piece | File | What it protects against |
+|---|---|---|
+| Ingestion | `.github/workflows/ingest.yml`, `ingestion/fetch_flights.py` | Runs can't pile up (concurrency group); one retry on OpenSky timeouts/5xx |
+| Watchdog | `.github/workflows/watchdog.yml` | Hourly: if data is >10 min old it re-enables + re-runs ingestion, re-checks, and **fails (emails you)** if still down. Uses only the built-in `GITHUB_TOKEN` — nothing that can expire |
+| Heartbeat | `.github/workflows/heartbeat.yml` | Weekly `[skip ci]` commit so GitHub never disables scheduled workflows after 60 idle days |
+| Health endpoint | `api/health.js` → `/api/health` | `200` = data fresh, `503` = stale/DB down. Monitor it externally |
+| Basemap fallback | `src/lib/tiles.js` | Auto-switches provider when tiles error out; `VITE_TILE_URL` pins your own |
+| Frontend resilience | `src/App.jsx`, `src/hooks/useFlightData.js` | Error boundary, config-error screen, error banner clears itself, 15 s retries |
+| SPA rewrite | `vercel.json` | `/analytics` etc. work on refresh / shared links |
 
-**cron-job.org job settings:** URL `https://api.github.com/repos/<you>/Flight-Pulse/actions/workflows/ingest.yml/dispatches`, method `POST`, headers `Authorization: Bearer <token>` and `Accept: application/vnd.github+json`, body `{"ref":"master"}`, every 2 minutes. Turn on failure notifications in cron-job.org (Settings → notifications) so an expired token emails you instead of failing silently.
+### One-time setup you must do (cannot be automated from the repo)
 
-**Environment variables** (Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (required — the app shows a configuration error screen if missing); optional `VITE_TILE_URL`, `VITE_TILE_ATTRIBUTION`.
+1. **Uptime monitor** (the real alarm): create a free [UptimeRobot](https://uptimerobot.com) monitor — type *HTTP(s)*, URL `https://<your-app>.vercel.app/api/health`, interval 5 min, add your email. It also keeps Supabase active.
+2. **cron-job.org**: keep the dispatch job (every 2 min) and enable failure notifications (Settings → notifications). Use a *fine-grained* GitHub token limited to this repo with **Actions: Read and write**; note its expiry date. If it expires the system still runs via the GitHub schedule (every 5 min) — you just lose the 2-min cadence.
+3. **Supabase SQL**: run `supabase/hardening.sql` once (SQL Editor) — fixes false ghost alerts from slow upserts and (optionally) drops the dead `flights_history` table.
+4. **GitHub repo secrets** must exist: `DATABASE_URL`, `SUPABASE_SERVICE_KEY` (and `OPENSKY_CLIENT_ID` / `OPENSKY_CLIENT_SECRET` for full coverage). The watchdog uses the first two.
+5. **Vercel env vars**: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (also used by `/api/health`). Optional `VITE_TILE_URL`, `VITE_TILE_ATTRIBUTION`, `HEALTH_MAX_AGE_SECONDS`.
+
+### What can still break (and what to do)
+
+| Failure | You will see | Fix |
+|---|---|---|
+| Supabase project paused/deleted | UptimeRobot alert; "Cannot reach the database" banner | Supabase dashboard → Restore project (ingestion every 2–5 min normally prevents auto-pause) |
+| Basemap provider changes (like CARTO's API-key requirement) | Watermark/blank map. Only tiles that *error* trigger the fallback; a provider returning a watermark with HTTP 200 can't be detected | Change the first entry in `src/lib/tiles.js` or set `VITE_TILE_URL` |
+| OpenSky blocks GitHub's IPs / rate-limits | `/api/health` 503 even though runs are green (`pipeline_runs.error_msg`) | Check OpenSky credentials secrets; consider a different runner/host |
+| GitHub Actions outage | Watchdog and ingest runs missing | Wait; cron-job.org triggers resume automatically |
+
+**Quick manual check:** open `https://<your-app>.vercel.app/api/health` — you should see `"ok": true` and `seconds_since_sync` under ~300.
 
 ---
 
