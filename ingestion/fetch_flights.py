@@ -52,9 +52,12 @@ OPENSKY_TOKEN_URL     = "https://auth.opensky-network.org/auth/realms/opensky-ne
 # 4,000 credits/day (= 1,000 calls), anonymous 400/day (= 100 calls). Several independent
 # triggers (cron-job.org, GitHub schedule, watchdog) can fire this script, so the script
 # itself enforces a minimum gap between OpenSky calls and extra triggers become no-ops.
-#   authenticated: >= 100 s  -> <= 864 calls/day = 3,456 credits (under 4,000)
-#   anonymous:     >= 900 s  -> <=  96 calls/day =   384 credits (under 400)
-MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 100))
+# The gap is measured from the END of the previous run (that is when its pipeline_runs row
+# is written, ~25 s after it started), so start-to-start spacing = gap + run duration:
+#   authenticated: >= 75 s  -> start-to-start >= ~100 s -> <= 864 calls/day = 3,456 credits (< 4,000)
+#                  (a 2-minute cron has a ~95 s end-to-start gap, so it is never skipped)
+#   anonymous:     >= 900 s -> <= ~93 calls/day = ~372 credits (< 400)
+MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 75))
 MIN_INTERVAL_ANON = int(os.environ.get("MIN_INTERVAL_ANON", 900))
 
 OPENSKY_URL      = "https://opensky-network.org/api/states/all"
