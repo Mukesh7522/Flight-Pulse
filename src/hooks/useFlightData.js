@@ -29,6 +29,7 @@ export function useFlightData() {
 
       if (err) throw err
       setFlights(data ?? [])
+      setError(null)   // recovered — clear any earlier failure banner
     } catch (e) {
       setError(
         /failed to fetch/i.test(e.message)
@@ -79,6 +80,13 @@ export function useFlightData() {
     }
   }, [])
 
+  // After a failed load, retry every 15s instead of waiting for the next 3-min poll
+  useEffect(() => {
+    if (!error) return
+    const id = setInterval(loadFlights, 15_000)
+    return () => clearInterval(id)
+  }, [error, loadFlights])
+
   useEffect(() => {
     loadFlights()
     loadStats()
@@ -99,7 +107,8 @@ export function useFlightData() {
 
   // Pipeline health: if the ingestion script itself is down, every flight looks
   // stale — we cannot distinguish real signal loss from pipeline outage.
-  const pipelineDown = stats != null && (stats.seconds_since_sync ?? 0) > 3600
+  // Ingestion normally runs every 2-5 min, so 15 min without data means it is down.
+  const pipelineDown = stats != null && (stats.seconds_since_sync ?? 0) > 900
 
   // Ghosts from DB view, enriched with full flight data (velocity, track, etc.)
   // for the map info card. Returns [] when pipeline is down.

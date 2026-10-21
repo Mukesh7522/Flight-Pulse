@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useRef, memo } from 'react'
 import { MapContainer, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { useFlightData } from '../hooks/useFlightData'
+import { TILE_PROVIDERS } from '../lib/tiles'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Evenly samples up to `max` items from an array
@@ -237,6 +238,50 @@ const Countdown = memo(function Countdown({ secondsSince, pipelineDown }) {
   )
 })
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RESILIENT TILE LAYER
+// Uses the first basemap in TILE_PROVIDERS and falls back to the next one when
+// most tiles fail to load (provider outage / block / quota). Remounts the layer
+// via `key` on each switch.
+// ─────────────────────────────────────────────────────────────────────────────
+function ResilientTileLayer() {
+  const [idx, setIdx] = useState(0)
+  const counts = useRef({ ok: 0, err: 0 })
+  const provider = TILE_PROVIDERS[idx]
+
+  useEffect(() => { counts.current = { ok: 0, err: 0 } }, [idx])
+
+  const handlers = useMemo(() => ({
+    tileload:  () => { counts.current.ok++ },
+    tileerror: () => {
+      const c = counts.current
+      c.err++
+      // Switch only when clearly broken (and the browser is online, otherwise every
+      // provider would "fail"): nothing has loaded yet, or failures outnumber successes
+      const broken = (c.ok === 0 && c.err >= 3) || (c.err >= 6 && c.err > c.ok)
+      if (broken && navigator.onLine && idx < TILE_PROVIDERS.length - 1) {
+        console.warn(`[FlightPulse] Basemap "${provider.id}" failing, switching to "${TILE_PROVIDERS[idx + 1].id}"`)
+        setIdx(idx + 1)
+      }
+    },
+  }), [idx, provider.id])
+
+  return (
+    <TileLayer
+      key={provider.id}
+      url={provider.url}
+      attribution={provider.attribution}
+      className={provider.className}
+      maxNativeZoom={provider.maxNativeZoom}
+      maxZoom={19}
+      noWrap={true}
+      bounds={[[-85.05, -180], [85.05, 180]]}
+      keepBuffer={4}
+      eventHandlers={handlers}
+    />
+  )
+}
+
 // ── Component ──────────────────────────────────────────────────────────────
 export default function LiveMap() {
   const { flights, ghosts, stats, loading, error, pipelineDown } = useFlightData()
@@ -314,15 +359,7 @@ export default function LiveMap() {
           zoomDelta={0.5}
           touchZoom={true}
         >
-          <TileLayer
-            url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-            attribution='Tiles &copy; Esri'
-            maxNativeZoom={16}
-            maxZoom={19}
-            noWrap={true}
-            bounds={[[-85.05, -180], [85.05, 180]]}
-            keepBuffer={4}
-          />
+          <ResilientTileLayer />
 
           {/* Heatmap */}
           <HeatLayer points={airborne.filter(f => !f.on_ground)} active={activeLayer === 'heat'} />

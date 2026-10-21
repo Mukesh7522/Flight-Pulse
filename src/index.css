@@ -64,3 +64,8 @@ body,
   z-index: 0;
   background: #060910;
 }
+
+/* Fallback basemap: light OSM tiles turned into a dark map */
+.fp-tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9) saturate(0.4);
+}

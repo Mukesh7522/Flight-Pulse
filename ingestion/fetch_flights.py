@@ -1,15 +1,18 @@
 """
 FlightPulse Global — OpenSky → Supabase Ingestion Script
 =========================================================
-Run: python ingestion/fetch_flights.py
+Run: python ingestion/fetch_flights.py   (one-shot; triggered every ~2 min)
 
-Loops every 60 seconds:
-  1. Fetch all live flight states from OpenSky Network (free, no auth needed)
+Each run:
+  1. Fetch all live flight states from OpenSky Network
   2. Validate + clean the data
-  3. Upsert into `flights_live` (replace current snapshot)
-  4. Append to `flights_history` (24h ring buffer)
-  5. Purge history older than 24h
+  3. Upsert into `flights_live` via the Supabase REST API (chunks of 1000)
+  4. Purge flights_live rows not seen in 30 minutes
+  5. Update the hourly anomaly counts
   6. Log the run to `pipeline_runs`
+
+Triggers: cron-job.org → GitHub workflow_dispatch (primary), plus the workflow's
+own schedule/push triggers. See "Operations" in README.md.
 """
 
 import os
@@ -180,26 +183,6 @@ def upsert_live(records: list[dict]) -> int:
         resp.raise_for_status()
         log.info("HTTP upserted rows %d–%d", i + 1, min(i + CHUNK, len(records)))
     return len(records)
-
-
-def insert_history(cur, records: list[dict]) -> None:
-    """Append current snapshot to flights_history."""
-    sql = """
-        INSERT INTO flights_history
-          (icao24, callsign, origin_country, lon, lat,
-           baro_altitude, geo_altitude, on_ground, velocity, true_track, vertical_rate)
-        VALUES %s
-    """
-    rows = [(r['icao24'], r['callsign'], r['origin_country'], r['lon'], r['lat'],
-             r['baro_altitude'], r['geo_altitude'], r['on_ground'], r['velocity'],
-             r['true_track'], r['vertical_rate']) for r in records]
-    psycopg2.extras.execute_values(cur, sql, rows, page_size=500)
-
-
-def purge_history(cur) -> None:
-    """Delete history records older than 1 hour (keeps storage ~270 MB)."""
-    cur.execute("SELECT purge_old_history()")
-    log.info("Purged history older than 1 hour")
 
 
 def upsert_anomaly_hourly(cur) -> None:

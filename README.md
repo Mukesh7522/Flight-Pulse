@@ -101,8 +101,8 @@ WHERE ingested_at < (
 | **Charts** | Recharts + custom SVG | Area, scatter, donut, radar, clock charts |
 | **Database** | Supabase (PostgreSQL 15) | PostgREST, RLS, views, triggers, RPC |
 | **Ingestion** | Python 3.11 + pg8000 | Validates data, upserts via Supabase REST API |
-| **Scheduler** | GitHub Actions cron | `*/3 * * * *` — runs `fetch_flights.py` |
-| **Backup trigger** | cron-job.org | Fires `workflow_dispatch` every 2 min for reliability |
+| **Scheduler** | cron-job.org → `workflow_dispatch` | Every 2 min (primary — GitHub's own cron is unreliable) |
+| **Backup trigger** | GitHub Actions cron | `*/5 * * * *`, plus a run on every push to the workflow file |
 | **Deploy** | Vercel | Auto-deploys on every push to `master` |
 | **Data source** | OpenSky Network | Community ADS-B receiver network, global coverage |
 
@@ -131,7 +131,7 @@ Make the repo **public**, then add secrets under **Settings → Secrets and vari
 
 Push to GitHub — `.github/workflows/ingest.yml` runs automatically.
 
-> GitHub pauses scheduled workflows after **60 days of repo inactivity**. A single commit reactivates them.
+> GitHub disables scheduled workflows after **60 days of repo inactivity** (state `disabled_inactivity`). The workflow has a keep-alive step, and cron-job.org (below) does not depend on GitHub's scheduler, but if it ever happens: Actions → FlightPulse Ingestion → **Enable workflow**.
 
 ---
 
@@ -194,7 +194,7 @@ python fetch_flights.py
 Flight-Pulse/
 ├── .github/
 │   └── workflows/
-│       └── ingest.yml              ← cron: */3 * * * *  +  workflow_dispatch
+│       └── ingest.yml              ← cron */5 + workflow_dispatch + push (see Operations)
 │
 ├── ingestion/
 │   ├── fetch_flights.py            ← fetch → validate → upsert → cleanup → log
@@ -216,6 +216,7 @@ Flight-Pulse/
 ├── supabase/
 │   └── reset_database.sql          ← full schema: tables, views, triggers, RLS, functions
 │
+├── vercel.json                     ← SPA rewrite so /analytics etc. work on refresh
 ├── package.json
 └── vite.config.js
 ```
@@ -247,12 +248,32 @@ Flight-Pulse/
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| **PIPELINE OFFLINE** | `ingested_at` not updated for over 1 hour | Check GitHub Actions → latest run → "Run ingestion" step for errors |
+| **PIPELINE OFFLINE** | `ingested_at` not updated for over 15 minutes | Check GitHub Actions → latest run → "Run ingestion" step for errors |
 | **0 ghost alerts** | No `status = 'success'` rows in `pipeline_runs` | Pipeline must complete successfully for ghost detection to have a reference timestamp |
 | **Actions green but no data** | `SUPABASE_SERVICE_KEY` missing from repo secrets | Add it under Settings → Secrets → Actions |
 | **Ingestion times out on OpenSky** | OpenSky blocking the GitHub Actions IP range | Intermittent — script falls back gracefully and retries next cycle |
-| **Scheduled workflow not running** | GitHub paused it after 60 days inactivity | Push any commit or trigger manually via Actions → Run workflow |
+| **Scheduled workflow not running** | GitHub disabled it after 60 days inactivity | Actions → Enable workflow, then Run workflow (or push any commit) |
 | **Ghost count spikes to thousands** | Views not updated after running old `reset_database.sql` | Re-run the latest `supabase/reset_database.sql` to get run-based ghost detection |
+
+---
+
+## Operations — what can break, and how to tell
+
+The app has four external dependencies. Each one has failed at least once; here is the symptom and the fix.
+
+| Dependency | Failure | Symptom | Fix |
+|---|---|---|---|
+| **Basemap tiles** | Provider changes terms / needs an API key (CARTO did this in 2026: tiles became an "API KEY REQUIRED" watermark) | Map background shows a watermark or grey tiles | The map auto-falls back to the next provider in `src/lib/tiles.js` only when tiles *error out*. A provider that returns a watermark image with HTTP 200 cannot be detected: change the first entry in `tiles.js`, or set `VITE_TILE_URL` in Vercel (e.g. a MapTiler/Stadia URL with your key) |
+| **Supabase** | Project paused (free tier, inactivity) or deleted | "Cannot reach the database" banner; stats show `—` | Supabase dashboard → Restore project. Ingestion every 2 min counts as activity and prevents auto-pause, so a pause means ingestion had already stopped |
+| **GitHub Actions** | Schedule disabled after 60 days idle; runs stuck in *Queued* | Data older than 15 min, **PIPELINE OFFLINE** label, no ghost alerts | Enable workflow + Run workflow. A push that changes `ingest.yml` also triggers a run |
+| **cron-job.org** | Job disables itself after repeated HTTP errors (usually an expired GitHub token) | Job shows *Failed*, "No upcoming executions" | Create a new fine-grained GitHub token (only this repo, **Actions: Read and write**), put it in the job's `Authorization: Bearer …` header, enable the job, press **Test run** (expect HTTP 204). Fine-grained tokens expire after at most 1 year — set a calendar reminder |
+| **Vercel** | Missing SPA rewrite → 404 on refresh | `/analytics` 404s when opened directly | `vercel.json` rewrite (already in repo) |
+
+**Quick health check** (replace the URL/key with yours): `GET /rest/v1/dashboard_stats?select=seconds_since_sync` should return a number under ~300.
+
+**cron-job.org job settings:** URL `https://api.github.com/repos/<you>/Flight-Pulse/actions/workflows/ingest.yml/dispatches`, method `POST`, headers `Authorization: Bearer <token>` and `Accept: application/vnd.github+json`, body `{"ref":"master"}`, every 2 minutes. Turn on failure notifications in cron-job.org (Settings → notifications) so an expired token emails you instead of failing silently.
+
+**Environment variables** (Vercel): `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (required — the app shows a configuration error screen if missing); optional `VITE_TILE_URL`, `VITE_TILE_ATTRIBUTION`.
 
 ---
 
