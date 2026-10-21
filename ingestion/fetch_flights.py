@@ -52,12 +52,13 @@ OPENSKY_TOKEN_URL     = "https://auth.opensky-network.org/auth/realms/opensky-ne
 # 4,000 credits/day (= 1,000 calls), anonymous 400/day (= 100 calls). Several independent
 # triggers (cron-job.org, GitHub schedule, watchdog) can fire this script, so the script
 # itself enforces a minimum gap between OpenSky calls and extra triggers become no-ops.
-# The gap is measured from the END of the previous run (that is when its pipeline_runs row
-# is written, ~25 s after it started), so start-to-start spacing = gap + run duration:
-#   authenticated: >= 75 s  -> start-to-start >= ~100 s -> <= 864 calls/day = 3,456 credits (< 4,000)
-#                  (a 2-minute cron has a ~95 s end-to-start gap, so it is never skipped)
-#   anonymous:     >= 900 s -> <= ~93 calls/day = ~372 credits (< 400)
-MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 75))
+# The gap is measured START-to-START: pipeline_runs.run_at is written at the END of a run, so
+# the previous run's start is reconstructed as run_at - (fetch_ms + upsert_ms) - overhead. (Measuring
+# from the end penalised slow runs: a 45 s upsert made the next 2-minute cron look "too soon".)
+#   authenticated: >= 100 s -> <= 864 calls/day = 3,456 credits (< 4,000); a 2-min cron never skips
+#   anonymous:     >= 900 s -> <= 96 calls/day  =   384 credits (< 400)
+RUN_OVERHEAD_S = 5   # connect / purge / log time outside fetch_ms + upsert_ms
+MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 100))
 MIN_INTERVAL_ANON = int(os.environ.get("MIN_INTERVAL_ANON", 900))
 
 OPENSKY_URL      = "https://opensky-network.org/api/states/all"
@@ -155,17 +156,20 @@ class RateLimited(Exception):
 
 def seconds_until_allowed(cur, min_interval: int) -> float:
     """How long to wait before another OpenSky call is allowed (0 = go ahead).
-    Based on the newest pipeline_runs row; after a 429 it honours the logged retry_after."""
-    cur.execute("SELECT EXTRACT(EPOCH FROM (now() - run_at)), status, error_msg "
+    Start-to-start spacing based on the newest pipeline_runs row; after a 429 it honours
+    the logged retry_after."""
+    cur.execute("SELECT EXTRACT(EPOCH FROM (now() - run_at)), status, error_msg, fetch_ms, upsert_ms "
                 "FROM pipeline_runs ORDER BY run_at DESC LIMIT 1")
     row = cur.fetchone()
     if not row:
         return 0.0
-    age, status, err = float(row[0]), row[1], row[2] or ""
-    wait = min_interval - age
+    age_since_end, status, err = float(row[0]), row[1], row[2] or ""
+    duration_s = ((row[3] or 0) + (row[4] or 0)) / 1000.0 + RUN_OVERHEAD_S
+    age_since_start = age_since_end + duration_s
+    wait = min_interval - age_since_start
     m = re.search(r"retry_after=(\d+)", err) if status == "error" else None
     if m:
-        wait = max(wait, int(m.group(1)) - age)
+        wait = max(wait, int(m.group(1)) - age_since_end)
     return max(0.0, wait)
 
 

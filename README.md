@@ -297,7 +297,7 @@ Flight-Pulse/
 
 OpenSky charges **4 credits** per global `/states/all` call. Standard accounts get **4,000 credits/day (1,000 calls)**; anonymous access only **400 (100 calls)**. Because several independent triggers can start the script, `fetch_flights.py` enforces its own minimum gap using the newest `pipeline_runs` row:
 
-- authenticated: at least **75 s** after the previous run *finished* (about 100 s start-to-start, so a 2-minute cron is never skipped; max about 864 calls = 3,456 credits/day)
+- authenticated: at least **100 s start-to-start** between OpenSky calls (the previous run's start is reconstructed from its `pipeline_runs` row, so slow runs are not penalised and a 2-minute cron is never skipped; max 864 calls = 3,456 credits/day)
 - anonymous (credentials missing/invalid): at least **900 s**, and a warning is logged. `/api/health` will then report stale data (>10 min), which is your signal to fix the `OPENSKY_*` secrets
 - after a `429` the run is logged with `retry_after=N` and later triggers stay quiet until it has passed (no more blind sleeping)
 - the log line `OpenSky credits remaining: N` shows the budget (open any run, step "Run ingestion")
