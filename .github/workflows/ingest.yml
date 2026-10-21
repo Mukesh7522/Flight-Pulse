@@ -4,6 +4,9 @@ on:
   schedule:
     - cron: '*/5 * * * *'   # every 5 minutes (~300s) — matches FETCH_INTERVAL
   workflow_dispatch:          # manual trigger from GitHub UI
+  push:
+    paths:
+      - '.github/workflows/ingest.yml'   # run once whenever this file changes
 
 permissions:
   contents: read
