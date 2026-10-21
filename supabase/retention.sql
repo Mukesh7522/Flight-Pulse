@@ -21,7 +21,13 @@ BEGIN
 END;
 $$;
 
--- Run it once now so old rows disappear immediately
+-- Only the database owner (ingestion script, pg_cron) may run it; the public API roles may not.
+-- (RLS already stops them deleting rows, but there is no reason to leave the door open.)
+REVOKE EXECUTE ON FUNCTION public.purge_retention() FROM PUBLIC, anon, authenticated;
+
+-- Run it once now so old rows disappear immediately.
+-- TIP: run this while ingestion is idle or accept that one ingestion run may fail once
+-- (a bulk DELETE and the bulk upsert can collide); the script now retries automatically.
 SELECT public.purge_retention();
 
 -- ─── OPTIONAL: run the cleanup inside the database every 5 minutes (pg_cron) ──

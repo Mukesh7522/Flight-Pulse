@@ -227,12 +227,39 @@ def upsert_live(records: list[dict]) -> int:
     url     = f"{SUPABASE_REST_URL}/rest/v1/flights_live"
     now_iso = datetime.now(timezone.utc).isoformat()
     CHUNK   = 1000
+    # Consistent row order -> consistent lock order, so concurrent runs / a cleanup DELETE
+    # cannot deadlock each other on the same rows.
+    records = sorted(records, key=lambda r: r["icao24"])
     for i in range(0, len(records), CHUNK):
         chunk = [{**r, "ingested_at": now_iso} for r in records[i:i + CHUNK]]
-        resp  = requests.post(url, headers=headers, json=chunk, timeout=60)
-        resp.raise_for_status()
+        post_with_retry(url, headers, chunk)
         log.info("HTTP upserted rows %d–%d", i + 1, min(i + CHUNK, len(records)))
     return len(records)
+
+
+# Seconds to wait before retry 2 and 3 of a chunk. The upsert is idempotent
+# (merge-duplicates), so repeating a chunk is always safe.
+RETRY_DELAYS = (2, 6)
+
+
+def post_with_retry(url, headers, chunk):
+    """POST one chunk, retrying transient failures (5xx, 408, 429, timeouts, connection errors)
+    up to 3 attempts. A permanent client error (400/401/403/404/422...) is raised immediately."""
+    attempts = len(RETRY_DELAYS) + 1
+    for attempt in range(1, attempts + 1):
+        try:
+            resp = requests.post(url, headers=headers, json=chunk, timeout=60)
+            if resp.status_code < 400:
+                return
+            transient = resp.status_code >= 500 or resp.status_code in (408, 429)
+            if not transient or attempt == attempts:
+                resp.raise_for_status()
+            log.warning("Supabase HTTP %d on upsert (attempt %d/%d) - retrying", resp.status_code, attempt, attempts)
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            if attempt == attempts:
+                raise
+            log.warning("Upsert %s (attempt %d/%d) - retrying", type(e).__name__, attempt, attempts)
+        time.sleep(RETRY_DELAYS[attempt - 1])
 
 
 def upsert_anomaly_hourly(cur) -> None:
