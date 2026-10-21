@@ -7,7 +7,7 @@
  *
  * Also polls dashboard_stats every 30s and ghost_flights every 60s.
  */
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { fetchAllFlights } from '../lib/fetchAllFlights'
 
@@ -17,12 +17,18 @@ export function useFlightData() {
   const [stats, setStats]         = useState(null)  // row from dashboard_stats
   const [loading, setLoading]     = useState(true)
   const [error, setError]         = useState(null)
+  const loadedOnce = useRef(false)   // true after the first complete load
 
   // ── Initial load ────────────────────────────────────────────
   const loadFlights = useCallback(async () => {
     try {
-      // Paged: a single request is capped at 10,000 rows but the table is larger
-      const data = await fetchAllFlights(supabase)
+      // Paged: a single request is capped at 10,000 rows but the table is larger.
+      // On the very first load, paint the first page straight away; later polls only
+      // swap in the complete set (so the map never shrinks and re-grows).
+      const data = await fetchAllFlights(supabase, firstRows => {
+        if (!loadedOnce.current) { setFlights(firstRows); setLoading(false) }
+      })
+      loadedOnce.current = true
       setFlights(data)
       setError(null)   // recovered — clear any earlier failure banner
     } catch (e) {

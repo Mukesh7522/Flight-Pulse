@@ -3,36 +3,46 @@
  *
  * Supabase caps a single request at "Max Rows" (10,000). flights_live holds ~12-20k
  * rows (airborne + grounded, up to 30 min of history), so one request silently dropped
- * 20%+ of the flights. We page with .range() and advance by the number of rows actually
- * returned, so it keeps working even if the server cap is lowered. Ordered by icao24
- * (stable key) so pages don't overlap while ingestion upserts.
+ * 20%+ of the flights. We fetch the first page (which also returns the exact total),
+ * hand it to `onFirstPage` so the map can paint immediately, then fetch the remaining
+ * pages IN PARALLEL. The page size is whatever the server actually returned for the
+ * first page, so this keeps working even if the server cap is lowered.
+ * Ordered by icao24 (stable key) so pages don't overlap while ingestion upserts.
  */
 const COLUMNS = 'icao24, callsign, origin_country, lat, lon, geo_altitude, baro_altitude, on_ground, velocity, true_track, vertical_rate, ingested_at'
 const PAGE_SIZE = 5000
 const MAX_ROWS  = 60_000   // safety stop
 
-export async function fetchAllFlights(supabase) {
+function page(supabase, from, size, withCount) {
+  return supabase
+    .from('flights_live')
+    .select(COLUMNS, withCount ? { count: 'exact' } : undefined)
+    .not('lat', 'is', null)
+    .not('lon', 'is', null)
+    .order('icao24')
+    .range(from, from + size - 1)
+}
+
+export async function fetchAllFlights(supabase, onFirstPage) {
+  const first = await page(supabase, 0, PAGE_SIZE, true)
+  if (first.error) throw first.error
+
   const byId = new Map()
-  let from = 0
-  let total = null
+  const add = rows => { for (const r of rows ?? []) byId.set(r.icao24, r) }
+  add(first.data)
+  if (onFirstPage) onFirstPage([...byId.values()])
 
-  while (from < MAX_ROWS) {
-    const { data, error, count } = await supabase
-      .from('flights_live')
-      .select(COLUMNS, { count: from === 0 ? 'exact' : undefined })
-      .not('lat', 'is', null)
-      .not('lon', 'is', null)
-      .order('icao24')
-      .range(from, from + PAGE_SIZE - 1)
+  const step  = first.data?.length ?? 0
+  const total = Math.min(first.count ?? step, MAX_ROWS)
+  if (step === 0 || total <= step) return [...byId.values()]
 
-    if (error) throw error
-    if (from === 0) total = count
-    if (!data || data.length === 0) break
+  const offsets = []
+  for (let from = step; from < total; from += step) offsets.push(from)
 
-    for (const row of data) byId.set(row.icao24, row)
-    from += data.length
-    if (total != null && from >= total) break
-    if (total == null && data.length < PAGE_SIZE) break
+  const rest = await Promise.all(offsets.map(from => page(supabase, from, step, false)))
+  for (const r of rest) {
+    if (r.error) throw r.error
+    add(r.data)
   }
   return [...byId.values()]
 }
