@@ -458,7 +458,12 @@ def main():
         # Protect the OpenSky credit budget (see MIN_INTERVAL_* above)
         authenticated = get_opensky_token() is not None
         min_interval = MIN_INTERVAL_AUTH if authenticated else MIN_INTERVAL_ANON
-        wait = seconds_until_allowed(conn.cursor(), min_interval)
+        try:
+            wait = seconds_until_allowed(conn.cursor(), min_interval)
+        except (OSError, pgdb.Error) as e:
+            # Connected, but the database cannot even answer a tiny query: it is overloaded.
+            log.error("Database too slow to read the run log (%s: %s) - skipping this cycle", type(e).__name__, e)
+            return
         if wait > 0:
             log.info("Skipping: last OpenSky call was too recent (%s mode, min gap %ds, wait %ds more) — "
                      "protecting the daily credit budget", "authenticated" if authenticated else "ANONYMOUS",

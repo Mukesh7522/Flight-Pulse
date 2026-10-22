@@ -319,6 +319,14 @@ Simulated over 300 cycles (about 10 hours of production) with these rules, the w
 - **Vacuum:** `flights_live` is rewritten every run, so Postgres must reclaim the dead rows (autovacuum does this by default). Without it the table would bloat to hundreds of MB.
 - **Size alarm:** after running `supabase/db_size_monitor.sql`, `/api/health` shows `db_size_mb` and turns red above 350 MB (`DB_ALERT_MB`), long before the 500 MB limit.
 
+### Disk IO budget (the Oct 21-22 outage)
+
+Free-tier Supabase databases get a daily Disk IO budget; when it is spent, disk throughput drops to a 5 MB/s baseline and queries time out (health shows 504/timeouts, runs take minutes). Rewriting ~13,000 `flights_live` rows every 2 minutes — each change also written to the write-ahead log (~3.9 MB per cycle plus a disk sync per batch) — was enough to exhaust it. Fixes:
+
+- `supabase/io_diet.sql` makes `flights_live` an **UNLOGGED** table (no write-ahead log: measured 3.9 MB -> 0 MB per cycle). It is only a scratch copy that is fully refreshed every 2 minutes; after a database *crash* it comes back empty and the next run refills it.
+- The ingestion script never piles load onto a sick database: connection timeout 20 s, upload timeout 30 s, 240 s run deadline, **no retry after a timeout or 502/503/504**, a quiet skipped cycle instead of a crash, and **backpressure** (each consecutive failed run doubles the gap, a slow upload doubles it too).
+- If the dashboard shows "about to deplete its Disk IO Budget" again: pause the cron-job.org job for 30-60 minutes (the budget refills whenever demand is at or below baseline), then check Reports -> Database.
+
 ### What can still break (and what to do)
 
 | Failure | You will see | Fix |
