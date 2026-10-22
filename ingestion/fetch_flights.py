@@ -57,6 +57,7 @@ OPENSKY_TOKEN_URL     = "https://auth.opensky-network.org/auth/realms/opensky-ne
 # from the end penalised slow runs: a 45 s upsert made the next 2-minute cron look "too soon".)
 #   authenticated: >= 100 s -> <= 864 calls/day = 3,456 credits (< 4,000); a 2-min cron never skips
 #   anonymous:     >= 900 s -> <= 96 calls/day  =   384 credits (< 400)
+SLOW_UPSERT_MS = 45_000   # a successful upload slower than this halves the pace
 RUN_OVERHEAD_S = 5   # connect / purge / log time outside fetch_ms + upsert_ms
 MIN_INTERVAL_AUTH = int(os.environ.get("MIN_INTERVAL_AUTH", 100))
 MIN_INTERVAL_ANON = int(os.environ.get("MIN_INTERVAL_ANON", 900))
@@ -155,18 +156,35 @@ class RateLimited(Exception):
 
 
 def seconds_until_allowed(cur, min_interval: int) -> float:
-    """How long to wait before another OpenSky call is allowed (0 = go ahead).
-    Start-to-start spacing based on the newest pipeline_runs row; after a 429 it honours
-    the logged retry_after."""
+    """How long to wait before another OpenSky call / upload is allowed (0 = go ahead).
+    Start-to-start spacing from the newest pipeline_runs rows, with BACKPRESSURE so a struggling
+    database gets breathing room:
+      - after a 429, honour the logged retry_after
+      - each consecutive failed run doubles the gap (x2, x4, x8 = max ~13 min at 100 s base)
+      - if the last successful upload was very slow (> 45 s), double the gap
+    """
     cur.execute("SELECT EXTRACT(EPOCH FROM (now() - run_at)), status, error_msg, fetch_ms, upsert_ms "
-                "FROM pipeline_runs ORDER BY run_at DESC LIMIT 1")
-    row = cur.fetchone()
-    if not row:
+                "FROM pipeline_runs ORDER BY run_at DESC LIMIT 6")
+    rows = cur.fetchall()
+    if not rows:
         return 0.0
-    age_since_end, status, err = float(row[0]), row[1], row[2] or ""
-    duration_s = ((row[3] or 0) + (row[4] or 0)) / 1000.0 + RUN_OVERHEAD_S
+    age_since_end, status, err = float(rows[0][0]), rows[0][1], rows[0][2] or ""
+    duration_s = ((rows[0][3] or 0) + (rows[0][4] or 0)) / 1000.0 + RUN_OVERHEAD_S
     age_since_start = age_since_end + duration_s
-    wait = min_interval - age_since_start
+
+    interval = min_interval
+    streak = 0
+    for r in rows:
+        if r[1] == "error" and "retry_after=" not in (r[2] or ""):
+            streak += 1
+        else:
+            break
+    if streak:
+        interval = min_interval * (2 ** min(streak, 3))
+    elif status == "success" and (rows[0][4] or 0) > SLOW_UPSERT_MS:
+        interval = min_interval * 2
+
+    wait = interval - age_since_start
     m = re.search(r"retry_after=(\d+)", err) if status == "error" else None
     if m:
         wait = max(wait, int(m.group(1)) - age_since_end)
@@ -241,24 +259,43 @@ def upsert_live(records: list[dict]) -> int:
 # (merge-duplicates), so repeating a chunk is always safe.
 RETRY_DELAYS = (2, 6)
 
+MAX_RUN_SECONDS = 240          # abort the upload if the run has taken this long (job limit is 5 min)
+REQUEST_TIMEOUT = 30           # per upload request
+_RUN_T0 = time.monotonic()
+
+
+class DatabaseOverloaded(Exception):
+    """Supabase is timing out or answering 502/503/504: stop adding load and try next cycle."""
+
 
 def post_with_retry(url, headers, chunk):
-    """POST one chunk, retrying transient failures (5xx, 408, 429, timeouts, connection errors)
-    up to 3 attempts. A permanent client error (400/401/403/404/422...) is raised immediately."""
+    """POST one chunk. Retries only failures where the server ANSWERED with a transient error
+    (500, 408, 429) or refused the connection - the chunk was not applied, so repeating is safe.
+    A TIMEOUT or a gateway error (502/503/504) means the database is overloaded and may still be
+    executing the request: retrying would stack duplicate heavy work on it, so we stop instead.
+    Permanent client errors (400/401/403/404/422...) are raised immediately."""
     attempts = len(RETRY_DELAYS) + 1
     for attempt in range(1, attempts + 1):
+        if time.monotonic() - _RUN_T0 > MAX_RUN_SECONDS:
+            raise DatabaseOverloaded(f"run deadline of {MAX_RUN_SECONDS}s exceeded")
         try:
-            resp = requests.post(url, headers=headers, json=chunk, timeout=60)
-            if resp.status_code < 400:
-                return
-            transient = resp.status_code >= 500 or resp.status_code in (408, 429)
-            if not transient or attempt == attempts:
-                resp.raise_for_status()
-            log.warning("Supabase HTTP %d on upsert (attempt %d/%d) - retrying", resp.status_code, attempt, attempts)
-        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            resp = requests.post(url, headers=headers, json=chunk, timeout=REQUEST_TIMEOUT)
+        except requests.exceptions.Timeout:
+            raise DatabaseOverloaded("upload request timed out")
+        except requests.exceptions.ConnectionError as e:
             if attempt == attempts:
                 raise
-            log.warning("Upsert %s (attempt %d/%d) - retrying", type(e).__name__, attempt, attempts)
+            log.warning("Upsert connection error (attempt %d/%d) - retrying", attempt, attempts)
+            time.sleep(RETRY_DELAYS[attempt - 1])
+            continue
+        if resp.status_code < 400:
+            return
+        if resp.status_code in (502, 503, 504):
+            raise DatabaseOverloaded(f"Supabase answered HTTP {resp.status_code}")
+        transient = resp.status_code in (500, 408, 429)
+        if not transient or attempt == attempts:
+            resp.raise_for_status()
+        log.warning("Supabase HTTP %d on upsert (attempt %d/%d) - retrying", resp.status_code, attempt, attempts)
         time.sleep(RETRY_DELAYS[attempt - 1])
 
 
@@ -351,6 +388,15 @@ def run_once(conn) -> None:
         except Exception:
             pass
         return   # not a crash: next triggers will no-op until retry_after has passed
+    except DatabaseOverloaded as e:
+        # Supabase is struggling: do not add load, do not crash. Log the cycle (backpressure in
+        # seconds_until_allowed() widens the gap) and let /api/health + UptimeRobot do the alerting.
+        log.error("Database overloaded - skipping this cycle: %s", e)
+        try:
+            log_run(conn.cursor(), records_fetched, upserted, fetch_ms, upsert_ms, "error", f"database overloaded: {e}")
+        except Exception:
+            pass
+        return
     except Exception as e:
         try:
             pass  # autocommit=True — no rollback needed
@@ -385,6 +431,7 @@ def make_connection():
         user=user,
         password=urllib.parse.unquote(password),
         ssl_context=True,
+        timeout=20,            # never hang on a stuck database (was: wait until GitHub killed the job)
     )
     conn.autocommit = True   # no explicit BEGIN/COMMIT — compatible with PgBouncer transaction mode
     log.info("Connected ✓")
@@ -400,7 +447,13 @@ def main():
         log.error("Missing Supabase credentials — ingestion cannot run")
         raise SystemExit(1)
 
-    conn = make_connection()
+    try:
+        conn = make_connection()
+    except (OSError, pgdb.Error) as e:
+        # Database unreachable / timing out: this is an outage to be ALERTED on (/api/health, UptimeRobot),
+        # not a crash to email on every 2-minute cycle. Skip quietly; the next cycle probes again.
+        log.error("Database unreachable (%s: %s) - skipping this cycle", type(e).__name__, e)
+        return
     try:
         # Protect the OpenSky credit budget (see MIN_INTERVAL_* above)
         authenticated = get_opensky_token() is not None
@@ -415,7 +468,11 @@ def main():
             log.warning("Running ANONYMOUS (400 credits/day): refresh limited to every %ds. "
                         "Check OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET secrets.", MIN_INTERVAL_ANON)
 
-        run_once(conn)
+        try:
+            run_once(conn)
+        except (OSError, pgdb.Error) as e:
+            log.error("Database connection problem during the run (%s: %s) - skipping this cycle", type(e).__name__, e)
+            return
 
         # Purge pipeline_runs older than 3 days (cheap — runs on every cycle, near-instant if nothing to delete)
         try:
