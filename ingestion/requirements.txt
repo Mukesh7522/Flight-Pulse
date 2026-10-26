@@ -4,11 +4,11 @@
 # crashing every encrypted database login. Upgrade these deliberately, together, and test
 # against a TLS Postgres first.
 requests==2.32.3
-pg8000==1.31.2
+pg8000==1.31.5
 python-dotenv==1.0.1
 
 # pg8000's dependencies (pinned to versions verified with the TLS/SCRAM-PLUS login)
 scramp==1.4.18
 asn1crypto==1.5.1
-python-dateutil==2.9.0.post0
+python-dateutil==3.0.0
 six==1.17.0
