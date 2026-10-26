@@ -1,0 +1,95 @@
+name: Canary (database login + dependencies)
+
+# Catches the class of outage that took the pipeline down on 2026-10-25: a library release that breaks
+# the encrypted (TLS + SCRAM) database login, found only when production crashed.
+#
+#  tls-login         Starts a throw-away Postgres with TLS + SCRAM-SHA-256 and runs the REAL
+#                    make_connection() code with the packages pinned in ingestion/requirements.txt.
+#                    No secrets needed, so it also runs on Dependabot pull requests: a dependency bump
+#                    that would break the login shows up as a red check BEFORE it is merged.
+#  production-login  Daily: logs in to the real Supabase project exactly like ingestion does and checks
+#                    the REST service key. Catches rotated passwords/keys, a blanked secret, or a project
+#                    that stopped accepting connections - before the next ingestion run does.
+#
+# A failing run emails you and carries a readable annotation with the cause.
+
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ingestion/**'
+      - '.github/workflows/canary.yml'
+  pull_request:
+    paths:
+      - 'ingestion/**'
+      - '.github/workflows/canary.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tls-login:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: ingestion/requirements.txt
+
+      - name: Install the pinned packages
+        run: |
+          pip install -r ingestion/requirements.txt
+          pip check
+
+      - name: Start a Postgres with TLS and SCRAM-SHA-256
+        run: |
+          PORT="${PGPORT:-5432}"
+          docker run -d --name pgtls -e POSTGRES_PASSWORD=canary_pw -p "$PORT:5432" postgres:16
+          # wait for the real server (the image first runs a temporary one that only listens on a socket)
+          for i in $(seq 1 60); do
+            docker logs pgtls 2>&1 | grep -q "PostgreSQL init process complete" && \
+              docker exec pgtls pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1 && break
+            sleep 1
+          done
+          docker exec pgtls bash -c 'cd /var/lib/postgresql/data && openssl req -x509 -nodes -newkey rsa:2048 -keyout server.key -out server.crt -days 2 -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost" >/dev/null 2>&1 && chown postgres:postgres server.key server.crt && chmod 600 server.key'
+          docker exec -u postgres pgtls psql -U postgres -c "ALTER SYSTEM SET ssl = 'on';"
+          docker restart pgtls
+          sleep 3
+          for i in $(seq 1 60); do
+            docker exec pgtls pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1 && break
+            sleep 1
+          done
+          docker exec pgtls pg_isready -h 127.0.0.1 -U postgres
+
+      - name: Real TLS + SCRAM login with the pinned packages
+        env:
+          DATABASE_URL: postgresql://postgres:canary_pw@localhost:5432/postgres
+        run: python ingestion/canary.py --local
+
+  production-login:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: ingestion/requirements.txt
+
+      - name: Install the pinned packages
+        run: pip install -r ingestion/requirements.txt
+
+      - name: Log in to the real project like ingestion does
+        env:
+          DATABASE_URL:         ${{ secrets.DATABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python ingestion/canary.py --production

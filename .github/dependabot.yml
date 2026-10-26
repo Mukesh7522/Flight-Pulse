@@ -1,0 +1,36 @@
+# Dependency updates arrive as pull requests (never straight into production). Each one runs the
+# "Canary" workflow, whose tls-login job performs a real encrypted database login with the proposed
+# versions, so a release like scramp 1.5.0 (which broke pg8000 on 2026-10-25) turns the PR red.
+version: 2
+updates:
+  # Python packages for the ingestion script. pg8000 and its dependencies move together.
+  - package-ecosystem: pip
+    directory: /ingestion
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      database-driver:
+        patterns: ["pg8000", "scramp", "asn1crypto", "python-dateutil", "six"]
+      http-and-config:
+        patterns: ["requests", "python-dotenv"]
+
+  # Frontend packages (package-lock.json is the source of truth)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: ["minor", "patch"]
+
+  # The pinned GitHub Actions used by the workflows
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2

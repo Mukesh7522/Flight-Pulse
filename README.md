@@ -327,6 +327,17 @@ Free-tier Supabase databases get a daily Disk IO budget; when it is spent, disk 
 - The ingestion script never piles load onto a sick database: connection timeout 20 s, upload timeout 30 s, 240 s run deadline, **no retry after a timeout or 502/503/504**, a quiet skipped cycle instead of a crash, and **backpressure** (each consecutive failed run doubles the gap, a slow upload doubles it too).
 - If the dashboard shows "about to deplete its Disk IO Budget" again: pause the cron-job.org job for 30-60 minutes (the budget refills whenever demand is at or below baseline), then check Reports -> Database.
 
+### Dependency safety net (the Oct 25-26 outage)
+
+On 25 Oct 2026 the library `scramp` released 1.5.0, which removed a function that `pg8000` still calls during the encrypted (TLS + SCRAM) database login. `requirements.txt` pinned `pg8000` but not its dependencies, so every fresh install pulled the broken release and ingestion crashed for ~11 hours. Now:
+
+- **Everything is pinned**: `ingestion/requirements.txt` (including `scramp`, `asn1crypto`, `python-dateutil`, `six`), the GitHub Actions versions, the runner image (`ubuntu-24.04`) and the frontend (`package-lock.json`). Nothing changes underneath you without a commit.
+- **Canary** (`.github/workflows/canary.yml`, `ingestion/canary.py`): runs the *real* `make_connection()` code against a throw-away TLS + SCRAM Postgres (no secrets, so it works on pull requests) and, daily, against the real Supabase project plus the REST service key. A broken library, a rotated password/key or a blanked secret fails the run, emails you, and the cause is written to the run's annotations.
+- **Dependabot** (`.github/dependabot.yml`): weekly pull requests for the Python packages (the database-driver group moves together), npm and the GitHub Actions. Every Python PR runs the canary first, so a release like `scramp 1.5.0` shows up as a **red check on the PR** instead of a production outage. Only merge PRs whose canary check is green.
+- **Failures explain themselves**: `ingestion/fetch_flights.py` prints every fatal error as a credential-redacted `::error::` annotation, readable at the run's summary page or via the API without logging in.
+
+Manual check any time: Actions -> Canary -> Run workflow.
+
 ### What can still break (and what to do)
 
 | Failure | You will see | Fix |
