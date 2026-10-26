@@ -14,6 +14,7 @@ not verify the certificate, so a self-signed test certificate is fine).
 """
 import argparse
 import importlib.metadata as md
+import ssl
 import sys
 
 
@@ -45,10 +46,15 @@ def main() -> int:
         if cur.fetchone()[0] != 1:
             return fail("SELECT 1 returned something else")
 
-        cur.execute("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")
-        row = cur.fetchone()
-        if not row or not row[0]:
-            return fail("connection is NOT encrypted (pg_stat_ssl.ssl is false)")
+        # Is OUR side of the connection TLS? (Do not ask the database: behind Supabase's pooler the
+        # pooler terminates TLS and talks to Postgres over its own link, so pg_stat_ssl reads false there.)
+        if not isinstance(getattr(conn, "_usock", None), ssl.SSLSocket):
+            return fail("client connection to the database is NOT TLS-encrypted")
+        if args.local:   # direct connection to the throw-away server: the server-side view must agree
+            cur.execute("SELECT ssl FROM pg_stat_ssl WHERE pid = pg_backend_pid()")
+            row = cur.fetchone()
+            if not row or not row[0]:
+                return fail("test server reports the connection is not encrypted")
         print("OK: encrypted connection, SELECT 1 works")
 
         if args.local:
