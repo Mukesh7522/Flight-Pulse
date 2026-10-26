@@ -16,6 +16,7 @@ own schedule/push triggers. See "Operations" in README.md.
 """
 
 import os
+import sys
 import re
 import time
 import logging
@@ -28,6 +29,43 @@ from dotenv import load_dotenv
 # ── Config ────────────────────────────────────────────────────────────────────
 
 load_dotenv(os.path.join(os.path.dirname(__file__), "..", ".env.local"))
+
+# ── Failure reporting ─────────────────────────────────────────────────────────
+# GitHub shows "::error::" lines as public run ANNOTATIONS (readable via the API without
+# logging in), so the cause of a failed run is visible without opening the raw log.
+_SECRET_ENV = ("DATABASE_URL", "SUPABASE_SERVICE_KEY", "OPENSKY_CLIENT_ID", "OPENSKY_CLIENT_SECRET")
+
+
+def redact(text: str) -> str:
+    """Remove anything that looks like a credential before it is printed."""
+    text = str(text)
+    for name in _SECRET_ENV:
+        val = os.environ.get(name, "")
+        if len(val) >= 6:
+            text = text.replace(val, f"<{name}>")
+    # the database password on its own (it can appear without the rest of the URL)
+    m = re.match(r"postgres(?:ql)?://[^:]+:(.+)@[^@]+$", os.environ.get("DATABASE_URL", ""))
+    if m and len(m.group(1)) >= 4:
+        text = text.replace(m.group(1), "<db-password>")
+    text = re.sub(r"postgres(?:ql)?://\S+", "postgresql://<redacted>", text)
+    text = re.sub(r"eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]*", "<jwt>", text)
+    text = re.sub(r"sb_(?:secret|publishable)_[A-Za-z0-9_\-]+", "<supabase-key>", text)
+    return text
+
+
+def emit_error(message: str) -> None:
+    """Print a GitHub Actions error annotation (single line, credentials removed)."""
+    cr, lf = chr(13), chr(10)
+    one_line = redact(message).replace("%", "%25").replace(cr, "").replace(lf, "%0A")
+    print(f"::error title=FlightPulse ingestion failed::{one_line}", flush=True)
+
+
+def _excepthook(exc_type, exc, tb):
+    emit_error(f"{exc_type.__name__}: {exc}")
+    sys.__excepthook__(exc_type, exc, tb)
+
+
+sys.excepthook = _excepthook
 
 DATABASE_URL         = os.environ["DATABASE_URL"]
 SUPABASE_SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_KEY", "")
@@ -444,7 +482,13 @@ def main():
     log.info("REST endpoint: %s", SUPABASE_REST_URL or "NOT DERIVED — check DATABASE_URL format")
     log.info("Service key: %s", "SET" if SUPABASE_SERVICE_KEY else "NOT SET — add SUPABASE_SERVICE_KEY secret")
     if not SUPABASE_REST_URL or not SUPABASE_SERVICE_KEY:
+        problems = []
+        if not SUPABASE_REST_URL:
+            problems.append("cannot derive the Supabase project URL from the DATABASE_URL secret (empty, or not a valid Supabase connection string)")
+        if not SUPABASE_SERVICE_KEY:
+            problems.append("SUPABASE_SERVICE_KEY secret is empty or missing")
         log.error("Missing Supabase credentials — ingestion cannot run")
+        emit_error("Missing credentials: " + "; ".join(problems) + ". Check GitHub repo Settings > Secrets and variables > Actions.")
         raise SystemExit(1)
 
     try:
@@ -491,4 +535,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except SystemExit as e:
+        if e.code not in (0, None):
+            emit_error(f"exited with code {e.code}")
+        raise
