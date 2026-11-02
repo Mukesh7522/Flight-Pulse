@@ -3,9 +3,9 @@
 # pg8000 still calls (AttributeError: module 'scramp' has no attribute 'make_channel_binding'),
 # crashing every encrypted database login. Upgrade these deliberately, together, and test
 # against a TLS Postgres first.
-requests==2.32.3
+requests==2.34.2
 pg8000==1.31.2
-python-dotenv==1.0.1
+python-dotenv==1.2.4
 
 # pg8000's dependencies (pinned to versions verified with the TLS/SCRAM-PLUS login)
 scramp==1.4.18
